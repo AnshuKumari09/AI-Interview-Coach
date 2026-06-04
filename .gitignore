@@ -1,0 +1,26 @@
+# Environment
+.env
+
+# Virtual environments
+venv/
+backend/venv/
+frontend/venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Uploads
+uploads/
+backend/uploads/
+
+# Audio files
+*.wav
+
+# Chroma DB
+chroma_db/
+backend/chroma_db/
+
+# OS files
+.DS_Store
+Thumbs.db
