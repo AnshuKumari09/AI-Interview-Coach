@@ -206,10 +206,7 @@ elif menu == "Start Interview":
 
         answer = st.text_area(
             "Your Answer",
-            value=st.session_state.get(
-                "voice_text",
-                ""
-            )
+            key="answer_text"
         )
 
         st.write("### Voice Answer")
@@ -220,7 +217,7 @@ elif menu == "Start Interview":
             key="recorder"
         )
 
-        if audio:
+        if  (audio and "processed_audio" not in st.session_state):
 
             with tempfile.NamedTemporaryFile(
                 delete=False,
@@ -260,7 +257,9 @@ elif menu == "Start Interview":
                 st.session_state[
                     "voice_text"
                 ] = transcription
-
+                st.session_state[
+                    "processed_audio"
+                ] = True
                 st.rerun()
 
         if "voice_text" in st.session_state:
@@ -278,10 +277,11 @@ elif menu == "Start Interview":
             ]
 
         if st.button("Submit Answer"):
+            st.write("BUTTON CLICKED")
 
             headers = {
                 "Authorization":
-                f"{'Bearer ' + st.session_state['token']}"
+                f"Bearer {st.session_state['token']}"
             }
 
             response = requests.post(
@@ -298,6 +298,8 @@ elif menu == "Start Interview":
                     answer
                 }
             )
+            st.write("STATUS:", response.status_code)
+            st.write("RESPONSE:", response.text)
 
             result = response.json()
 
@@ -308,16 +310,30 @@ elif menu == "Start Interview":
                 )
 
             if "next_question" in result:
-
+                # if "processed_audio" in st.session_state:
+                #     del st.session_state[
+                #         "processed_audio"
+                #     ]
                 st.session_state["question"] = (
                     result["next_question"]
                 )
+        
+    
 
-                if "voice_text" in st.session_state:
-                    del st.session_state[
-                        "voice_text"
-                    ]
+                # if "voice_text" in st.session_state:
+                #     del st.session_state[
+                #         "voice_text"
+                #     ]
 
+                # st.session_state["question"] = (
+                #     result["next_question"]
+                # )
+
+                # if "voice_text" in st.session_state:
+                #     del st.session_state[
+                #         "voice_text"
+                #     ]
+                st.session_state["voice_text"] = ""
                 requests.post(
                     f"{BACKEND_URL}/ai-speak",
                     json={
@@ -330,6 +346,58 @@ elif menu == "Start Interview":
 
             else:
 
+                st.balloons()
                 st.success(
-                    "Interview Completed"
+                     "🎉 Interview Completed Successfully!"
+                 )
+                st.markdown("## Interview Summary")
+
+                if "average_score" in result:
+                    st.metric(
+                        "Average Score",
+                        result["average_score"]
+                    )
+                st.write(
+                    f"Questions Attempted: "
+                    f"{result.get('total_questions', 0)}"
                 )
+
+                st.markdown("### Detailed Feedback")
+
+                for i, feedback in enumerate(
+                    result["evaluations"],
+                    start=1
+                ):
+                    with st.expander(
+                        f"Question {i}"
+                    ):
+                        st.write(feedback)
+                st.markdown("---")
+                st.success(
+                     """
+                     Thank you for taking the interview.
+
+                    You completed the interview successfully.
+
+                    Keep practicing consistently and focus on explaining your projects with more structure and technical depth.
+
+                    Every interview improves your communication and confidence.
+
+                    Best of luck for your placements and future opportunities! 🚀
+                   """
+    
+                )
+            # Clear Interview State
+                del st.session_state["question"]
+                del st.session_state["session_id"]
+
+                if "voice_text" in st.session_state:
+                    del st.session_state["voice_text"]
+                
+                if "answer_text" in st.session_state:
+                    del st.session_state["answer_text"]
+
+
+    
+        
+        

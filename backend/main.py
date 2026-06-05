@@ -175,77 +175,104 @@ def submit_answer(
     user: str = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    
+    print("\n========== SUBMIT ==========")
+    print("SESSION:", request.session_id)
+    print("DB SESSION:", request.db_session_id)
+    print("ANSWER:", request.answer)
+    print("============================\n")
 
-    session = interview_sessions.get(
-        request.session_id
-    )
+    session = interview_sessions.get(request.session_id)
 
     if not session:
-        return {
-            "error": "Invalid session"
-        }
+        return {"error": "Invalid session"}
 
-    current_index = session[
-        "current_question"
-    ]
-
+    current_index = session["current_question"]
     questions = session["questions"]
 
-    current_question = questions[
-        current_index
-    ]
+    current_question = questions[current_index]
 
     evaluation = evaluate_answer(
         current_question,
         request.answer
     )
 
+    score = 0
+
+    try:
+        if "Score:" in evaluation:
+            score_text = (
+                evaluation
+                .split("Score:")[1]
+                .split("out")[0]
+                .strip()
+            )
+            score = int(score_text)
+
+    except Exception:
+        score = 0
+
+    # Save question record
     question_row = InterviewQuestion(
         session_id=request.db_session_id,
         question=current_question,
         user_answer=request.answer,
         evaluation=evaluation,
-        score=8
+        score=score
     )
 
     db.add(question_row)
     db.commit()
 
-    session["scores"].append(
-        evaluation
-    )
+    session["scores"].append(evaluation)
 
+    # Move to next question
     session["current_question"] += 1
 
-    if session["current_question"] >= len(
-        questions
-    ):
+    # Interview completed
+    if session["current_question"] >= len(questions):
 
         db_session = (
             db.query(InterviewSession)
             .filter(
-                InterviewSession.id ==
-                request.db_session_id
+                InterviewSession.id == request.db_session_id
             )
             .first()
         )
 
-        if db_session:
-            db_session.completed_at = \
-                datetime.utcnow()
+        avg_score = 0
 
-            db_session.score = 80
+        if db_session:
+
+            all_questions = (
+                db.query(InterviewQuestion)
+                .filter(
+                    InterviewQuestion.session_id
+                    == request.db_session_id
+                )
+                .all()
+            )
+
+            if len(all_questions) > 0:
+                avg_score = round(
+                    sum(q.score for q in all_questions)
+                    / len(all_questions),
+                    2
+                )
+
+            db_session.completed_at = datetime.utcnow()
+            db_session.score = avg_score
 
             db.commit()
 
         return {
-            "message":
-            "Interview Completed",
-
-            "evaluations":
-            session["scores"]
+            "message": "Interview Completed",
+            "total_questions": len(questions),
+            "average_score": avg_score,
+            "evaluations": session["scores"]
         }
 
+    # Next question
     next_question = questions[
         session["current_question"]
     ]

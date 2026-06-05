@@ -5,7 +5,7 @@ def generate_questions(resume_text):
     prompt = f"""
     You are a senior technical interviewer.
 
-    Based on the candidate's resume, generate exactly 10 interview questions.
+    Based on the candidate's resume, generate exactly 2 interview questions.
 
     Return ONLY the questions.
     One question per line.
