@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 from streamlit_mic_recorder import mic_recorder
 import tempfile
+import threading  
 
 BACKEND_URL = "http://127.0.0.1:8000"
 
@@ -16,7 +17,11 @@ menu = st.sidebar.selectbox(
         "Start Interview"
     ]
 )
-
+def speak_async(text):
+    requests.post(
+        f"{BACKEND_URL}/ai-speak",
+        json={"text": text}
+    )
 # ---------------- SIGNUP ----------------
 
 if menu == "Signup":
@@ -128,6 +133,7 @@ elif menu == "Upload Resume":
 
             st.success("Resume Uploaded")
 
+
 # ---------------- START INTERVIEW ----------------
 
 elif menu == "Start Interview":
@@ -139,8 +145,33 @@ elif menu == "Start Interview":
         type=["pdf"],
         key="interview_resume"
     )
+    if "recording_key" not in st.session_state:
+        st.session_state["recording_key"] = 0
 
     if st.button("Start Interview"):
+        st.session_state["recording_key"] += 1
+        if "last_evaluation" in st.session_state:
+            del st.session_state["last_evaluation"]
+
+        if "voice_text" in st.session_state:
+            del st.session_state["voice_text"]
+
+        if "processed_audio" in st.session_state:
+            del st.session_state["processed_audio"]
+
+        if "answer_text" in st.session_state:
+            del st.session_state["answer_text"]
+        if "question" in st.session_state:
+            del st.session_state["question"]
+
+        if "session_id" in st.session_state:
+            del st.session_state["session_id"]
+
+        if "db_session_id" in st.session_state:
+            del st.session_state["db_session_id"]
+        
+
+        
 
         if "token" not in st.session_state:
             st.error("Please login first")
@@ -176,12 +207,30 @@ elif menu == "Start Interview":
             st.session_state["db_session_id"]=data["db_session_id"]
             st.session_state["question"] = data["first_question"]
 
-            requests.post(
-                f"{BACKEND_URL}/ai-speak",
-                json={
-                    "text": data["first_question"]
-                }
-            )
+            # requests.post(
+            #     f"{BACKEND_URL}/ai-speak",
+            #     json={
+            #         "text": data["intro"] +"\n\n" + data["first_question"]
+            #     }
+            # )
+
+            threading.Thread(
+                target=speak_async,
+                args=(data["intro"] + "\n\n" + data["first_question"],)
+            ).start()
+    
+    
+
+
+
+    if "last_evaluation" in st.session_state:
+
+          with st.expander("Previous Feedback"):
+              st.markdown(
+                  st.session_state["last_evaluation"]
+              )
+            
+        
 
     if "question" in st.session_state:
 
@@ -196,25 +245,32 @@ elif menu == "Start Interview":
             key="speak_question"
         ):
 
-            requests.post(
-                f"{BACKEND_URL}/ai-speak",
-                json={
-                    "text":
-                    st.session_state["question"]
-                }
-            )
+            # requests.post(
+            #     f"{BACKEND_URL}/ai-speak",
+            #     json={
+            #         "text":
+            #         st.session_state["question"]
+            #     }
+            # )
 
+            threading.Thread(
+                target=speak_async,
+                args=(st.session_state["question"],)
+            ).start()
+    
         answer = st.text_area(
             "Your Answer",
             key="answer_text"
         )
 
         st.write("### Voice Answer")
+        if "recording_key" not in st.session_state:
+            st.session_state["recording_key"] = 0
 
         audio = mic_recorder(
             start_prompt="🎙 Start Recording",
             stop_prompt="⏹ Stop Recording",
-            key="recorder"
+            key=f"recorder_{st.session_state['recording_key']}"
         )
 
         if  (audio and "processed_audio" not in st.session_state):
@@ -277,7 +333,11 @@ elif menu == "Start Interview":
             ]
 
         if st.button("Submit Answer"):
-            st.write("BUTTON CLICKED")
+
+            # ✅ FIX 2: Empty answer check
+            if not answer or not answer.strip():
+                st.warning("Please provide an answer first")
+                st.stop()
 
             headers = {
                 "Authorization":
@@ -298,49 +358,50 @@ elif menu == "Start Interview":
                     answer
                 }
             )
-            st.write("STATUS:", response.status_code)
-            st.write("RESPONSE:", response.text)
+            try:
+                result = response.json()
+            except:
+                st.error("Server Error")
 
-            result = response.json()
+
+            
 
             if "evaluation" in result:
-
-                st.markdown(
-                    result["evaluation"]
-                )
+                st.session_state["last_evaluation"] = result["evaluation"]
 
             if "next_question" in result:
-                # if "processed_audio" in st.session_state:
-                #     del st.session_state[
-                #         "processed_audio"
-                #     ]
                 st.session_state["question"] = (
                     result["next_question"]
                 )
+                if "voice_text" in st.session_state:
+                    del st.session_state[
+                        "voice_text"
+                    ]
+                if "answer_text" in st.session_state:
+                    del st.session_state["answer_text"]
         
-    
+                if "processed_audio" in st.session_state:
+                    del st.session_state["processed_audio"]
+                st.session_state["recording_key"] += 1
 
-                # if "voice_text" in st.session_state:
-                #     del st.session_state[
-                #         "voice_text"
-                #     ]
+                st.session_state["question"] = result["next_question"]
 
-                # st.session_state["question"] = (
-                #     result["next_question"]
+                # ✅ FIX 1: pending_speak logic hatao, seedha speak karo
+                # requests.post(
+                #     f"{BACKEND_URL}/ai-speak",
+                #     json={
+                #         "text":
+                #         result["next_question"]
+                #     }
                 # )
 
-                # if "voice_text" in st.session_state:
-                #     del st.session_state[
-                #         "voice_text"
-                #     ]
-                st.session_state["voice_text"] = ""
-                requests.post(
-                    f"{BACKEND_URL}/ai-speak",
-                    json={
-                        "text":
-                        result["next_question"]
-                    }
-                )
+                threading.Thread(
+                    target=speak_async,
+                    args=(result["next_question"],)
+                ).start()
+    
+    
+
 
                 st.rerun()
 
@@ -350,32 +411,28 @@ elif menu == "Start Interview":
                 st.success(
                      "🎉 Interview Completed Successfully!"
                  )
-                st.markdown("## Interview Summary")
+               
+                if "summary" in result:
+                    summary = result["summary"]
+                    st.markdown("## Interview Summary")
+                    st.metric(
+                        "Questions Answered",
+                        summary["total_questions"]
+                    )
 
-                if "average_score" in result:
+                
                     st.metric(
                         "Average Score",
-                        result["average_score"]
+                        f"{summary['average_score']}/10"
                     )
-                st.write(
-                    f"Questions Attempted: "
-                    f"{result.get('total_questions', 0)}"
-                )
-
-                st.markdown("### Detailed Feedback")
-
-                for i, feedback in enumerate(
-                    result["evaluations"],
-                    start=1
-                ):
-                    with st.expander(
-                        f"Question {i}"
-                    ):
-                        st.write(feedback)
+                    st.info(
+                        summary["feedback"]
+                    )
+                
                 st.markdown("---")
                 st.success(
                      """
-                     Thank you for taking the interview.
+                     ### Thank You
 
                     You completed the interview successfully.
 
@@ -387,16 +444,375 @@ elif menu == "Start Interview":
                    """
     
                 )
-            # Clear Interview State
-                del st.session_state["question"]
-                del st.session_state["session_id"]
 
-                if "voice_text" in st.session_state:
-                    del st.session_state["voice_text"]
+                keys_to_clear = [
+                    "question",
+                    "voice_text",
+                    "answer_text",
+                    "processed_audio",
+                    "session_id",
+                    "db_session_id",
+                    "last_evaluation"
+                ]
+
+                for key in keys_to_clear:
+                    if key in st.session_state:
+                        del st.session_state[key]
+
+                st.session_state["recording_key"] += 1
+
+                # st.rerun()
+
+# # ---------------- START INTERVIEW ----------------
+
+# elif menu == "Start Interview":
+
+#     st.header("Start Interview")
+
+#     uploaded_file = st.file_uploader(
+#         "Upload Resume",
+#         type=["pdf"],
+#         key="interview_resume"
+#     )
+#     if "recording_key" not in st.session_state:
+#         st.session_state["recording_key"] = 0
+
+#     if st.button("Start Interview"):
+#         st.session_state["recording_key"] += 1
+#         if "last_evaluation" in st.session_state:
+#             del st.session_state["last_evaluation"]
+
+#         if "voice_text" in st.session_state:
+#             del st.session_state["voice_text"]
+
+#         if "processed_audio" in st.session_state:
+#             del st.session_state["processed_audio"]
+
+#         if "answer_text" in st.session_state:
+#             del st.session_state["answer_text"]
+#         if "question" in st.session_state:
+#             del st.session_state["question"]
+
+#         if "session_id" in st.session_state:
+#             del st.session_state["session_id"]
+
+#         if "db_session_id" in st.session_state:
+#             del st.session_state["db_session_id"]
+        
+
+        
+
+#         if "token" not in st.session_state:
+#             st.error("Please login first")
+
+#         elif uploaded_file is None:
+#             st.error("Please upload resume")
+
+#         else:
+
+#             headers = {
+#                 "Authorization":
+#                 f"Bearer {st.session_state['token']}"
+#             }
+
+#             files = {
+#                 "file": (
+#                     uploaded_file.name,
+#                     uploaded_file,
+#                     "application/pdf"
+#                 )
+#             }
+
+#             response = requests.post(
+#                 f"{BACKEND_URL}/start-interview",
+#                 headers=headers,
+#                 files=files
+#             )
+
+#             data = response.json()
+
+
+#             st.session_state["session_id"] = data["session_id"]
+#             st.session_state["db_session_id"]=data["db_session_id"]
+#             st.session_state["question"] = data["first_question"]
+
+#             requests.post(
+#                 f"{BACKEND_URL}/ai-speak",
+#                 json={
+#                     "text": data["intro"] +"\n\n" + data["first_question"]
+#                 }
+#             )
+
+
+#     if "last_evaluation" in st.session_state:
+
+#           with st.expander("Previous Feedback"):
+#               st.markdown(
+#                   st.session_state["last_evaluation"]
+#               )
+            
+        
+
+#     if "question" in st.session_state:
+
+#         st.subheader("Question")
+
+#         st.write(
+#             st.session_state["question"]
+#         )
+
+#         if st.button(
+#             "🔊 Speak Question",
+#             key="speak_question"
+#         ):
+
+#             requests.post(
+#                 f"{BACKEND_URL}/ai-speak",
+#                 json={
+#                     "text":
+#                     st.session_state["question"]
+#                 }
+#             )
+
+#         answer = st.text_area(
+#             "Your Answer",
+#             key="answer_text"
+#         )
+
+#         st.write("### Voice Answer")
+#         if "recording_key" not in st.session_state:
+#             st.session_state["recording_key"] = 0
+
+#         audio = mic_recorder(
+#             start_prompt="🎙 Start Recording",
+#             stop_prompt="⏹ Stop Recording",
+#             key=f"recorder_{st.session_state['recording_key']}"
+#         )
+
+#         if  (audio and "processed_audio" not in st.session_state):
+
+#             with tempfile.NamedTemporaryFile(
+#                 delete=False,
+#                 suffix=".wav"
+#             ) as temp_audio:
+
+#                 temp_audio.write(
+#                     audio["bytes"]
+#                 )
+
+#                 temp_audio_path = temp_audio.name
+
+#             with open(
+#                 temp_audio_path,
+#                 "rb"
+#             ) as f:
+
+#                 files = {
+#                     "file": (
+#                         "answer.wav",
+#                         f,
+#                         "audio/wav"
+#                     )
+#                 }
+
+#                 response = requests.post(
+#                     f"{BACKEND_URL}/transcribe-audio",
+#                     files=files
+#                 )
+
+#             if response.status_code == 200:
+
+#                 transcription = response.json()[
+#                     "transcription"
+#                 ]
+
+#                 st.session_state[
+#                     "voice_text"
+#                 ] = transcription
+#                 st.session_state[
+#                     "processed_audio"
+#                 ] = True
+#                 st.rerun()
+
+#         if "voice_text" in st.session_state:
+
+#             st.write(
+#                 "### Transcribed Text"
+#             )
+
+#             st.write(
+#                 st.session_state["voice_text"]
+#             )
+
+#             answer = st.session_state[
+#                 "voice_text"
+#             ]
+
+#         if st.button("Submit Answer"):
+#             # st.write("BUTTON CLICKED")
+
+#             headers = {
+#                 "Authorization":
+#                 f"Bearer {st.session_state['token']}"
+#             }
+
+#             response = requests.post(
+#                 f"{BACKEND_URL}/submit-answer",
+#                 headers=headers,
+#                 json={
+#                     "session_id":
+#                     st.session_state["session_id"],
+
+#                     "db_session_id":
+#                     st.session_state["db_session_id"],
+
+#                     "answer":
+#                     answer
+#                 }
+#             )
+#             # st.write("STATUS:", response.status_code)
+#             # st.write("RESPONSE:", response.text)
+#             try:
+#                 result = response.json()
+#             except:
+#                 st.error("Server Error")
+
+
+            
+
+#             if "evaluation" in result:
+#                 st.session_state["last_evaluation"] = result["evaluation"]
+
+#                 # st.markdown(
+#                 #     result["evaluation"]
+#                 # )
+
+#             if "next_question" in result:
+#                 st.session_state["question"] = (
+#                     result["next_question"]
+#                 )
+#                 # st.session_state["voice_text"] = ""
+#                 # st.session_state["answer_text"] = ""
+#                 if "voice_text" in st.session_state:
+#                     del st.session_state[
+#                         "voice_text"
+#                     ]
+#                 if "answer_text" in st.session_state:
+#                     del st.session_state["answer_text"]
+        
+#                 if "processed_audio" in st.session_state:
+#                     del st.session_state["processed_audio"]
+#                 st.session_state["recording_key"] += 1
+
                 
-                if "answer_text" in st.session_state:
-                    del st.session_state["answer_text"]
 
+#                 # st.session_state["question"] = (
+#                 #     result["next_question"]
+#                 # )
+
+#                 st.session_state["question"] = result["next_question"]
+#                 if "pending_speak" in st.session_state:
+
+#                          requests.post(
+#                     f"{BACKEND_URL}/ai-speak",
+#                     json={
+#                         "text":
+#                         result["next_question"]
+#                     }
+#                 )
+#                          del st.session_state["pending_speak"]
+#                 st.session_state["pending_speak"] = result["next_question"]
+                
+
+#                 st.rerun()
+
+#             else:
+
+#                 st.balloons()
+#                 st.success(
+#                      "🎉 Interview Completed Successfully!"
+#                  )
+               
+#                 if "summary" in result:
+#                     summary = result["summary"]
+#                     st.markdown("## Interview Summary")
+#                     st.metric(
+#                         "Questions Answered",
+#                         summary["total_questions"]
+#                     )
+
+                
+#                     st.metric(
+#                         "Average Score",
+#                         f"{summary['average_score']}/10"
+#                     )
+#                     st.info(
+#                         summary["feedback"]
+#                     )
+                
+
+#                 # for i, feedback in enumerate(
+#                 #     result["evaluations"],
+#                 #     start=1
+#                 # ):
+#                 #     with st.expander(
+#                 #         f"Question {i}"
+#                 #     ):
+#                 #         st.write(feedback)
+#                 st.markdown("---")
+#                 st.success(
+#                      """
+#                      ### Thank You
+
+#                     You completed the interview successfully.
+
+#                     Keep practicing consistently and focus on explaining your projects with more structure and technical depth.
+
+#                     Every interview improves your communication and confidence.
+
+#                     Best of luck for your placements and future opportunities! 🚀
+#                    """
+    
+#                 )
+#             #     if "question" in st.session_state:
+#             #         del st.session_state["question"]
+                
+#             #     if "voice_text" in st.session_state:
+#             #         del st.session_state["voice_text"]
+                
+#             # # Clear Interview State
+#             #     # del st.session_state["question"]
+#             #     # del st.session_state["session_id"]
+
+#             #     if "voice_text" in st.session_state:
+#             #         del st.session_state["voice_text"]
+                
+#             #     if "answer_text" in st.session_state:
+#             #         del st.session_state["answer_text"]
+#             #     if "processed_audio" in st.session_state:
+#             #         del st.session_state["processed_audio"]
+#             #     if "session_id" in st.session_state:
+#             #         del st.session_state["session_id"]
+#             #     if "db_session_id" in st.session_state:
+#             #         del st.session_state["db_session_id"]
+
+#                 keys_to_clear = [
+#                     "question",
+#                     "voice_text",
+#                     "answer_text",
+#                     "processed_audio",
+#                     "session_id",
+#                     "db_session_id",
+#                     "last_evaluation"
+#                 ]
+
+#                 for key in keys_to_clear:
+#                     if key in st.session_state:
+#                         del st.session_state[key]
+
+#                 st.session_state["recording_key"] += 1
+
+#                 st.rerun()
 
     
         
