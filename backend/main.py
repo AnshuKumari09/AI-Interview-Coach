@@ -73,60 +73,7 @@ def login(email: str, password: str, db: Session = Depends(get_db)):
         "access_token": token,
         "token_type": "bearer"
     }
-# @app.post("/upload-resume")
-# async def upload_resume(
-#     file: UploadFile = File(...),
-#     user: str = Depends(get_current_user)
-# ):
 
-#     # Extension nikalo
-#     extension = file.filename.split(".")[-1].lower()
-
-#     allowed_extensions = ["pdf", "docx"]
-
-#     if extension not in allowed_extensions:
-#         return {"error": "Unsupported file type"}
-
-#     content = await file.read()
-
-#     unique_id = str(uuid.uuid4())[:8]
-#     unique_filename = f"{unique_id}_{file.filename}"
-#     file_path = f"uploads/{unique_filename}"
-
-#     with open(file_path, "wb") as f:
-#         f.write(content)
-
-#     try:
-#         if extension == "pdf":
-#             text = extract_pdf_text(file_path)
-#         else:
-#             text = extract_docx_text(file_path)
-
-#         cleaned_text = clean_text(text)
-#         chunks = chunk_text(cleaned_text)
-#         embeddings = [get_embedding(c) for c in chunks]
-        
-
-#         print("TOTAL CHUNKS:", len(chunks))
-
-#         for i, c in enumerate(chunks):
-#             print(f"\nCHUNK {i+1}\n")
-    
-#             print(c[:100])
-
-#         add_chunks(chunks, embeddings)
-
-#         return {
-#             "filename": unique_filename,
-#             "text": cleaned_text,
-#             "uploaded_by": user   # 👈 important (from JWT)
-#         }
-
-#     except Exception as e:
-#         return {
-#             "message": "Failed to process resume",
-#             "error": str(e)
-#         }
 
 @app.post("/analyze-resume")
 def analyze_resume_api(request: ResumeRequest):
@@ -284,57 +231,10 @@ def submit_answer(
 
 
 
-@app.post("/mock-interview")
-async def mock_interview(file: UploadFile = File(...)):
-
-    # extension nikalo
-    extension = file.filename.split(".")[-1].lower()
-
-    # validation
-    if extension not in ["pdf", "docx"]:
-        return {
-            "error": "Unsupported file type"
-        }
-
-    # file read
-    content = await file.read()
-
-    # unique filename
-    unique_id = str(uuid.uuid4())[:8]
-
-    unique_filename = f"{unique_id}_{file.filename}"
-
-    file_path = f"uploads/{unique_filename}"
-
-    # save file
-    with open(file_path, "wb") as f:
-        f.write(content)
-
-    # text extraction
-    if extension == "pdf":
-        resume_text = extract_pdf_text(file_path)
-
-    else:
-        resume_text = extract_docx_text(file_path)
-
-    # cleaning
-    resume_text = clean_text(resume_text)
-
-    # analysis
-    analysis = analyze_resume(resume_text)
-
-    # questions
-    questions = generate_questions(resume_text)
-
-    return {
-        "filename": unique_filename,
-        "analysis": analysis,
-        "questions": questions
-    }
-
 @app.post("/start-interview")
 async def start_interview(
     file: UploadFile = File(...),
+    difficulty: str = "Medium",
     user: str = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -361,7 +261,7 @@ async def start_interview(
     analysis = analyze_resume(resume_text)
 
     questions = generate_questions(
-        resume_text
+        resume_text,difficulty
     )
     db_user = (
     db.query(User)

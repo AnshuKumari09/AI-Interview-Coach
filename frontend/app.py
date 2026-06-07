@@ -206,6 +206,12 @@ elif menu == "Upload Resume":
 # ---------------- START INTERVIEW ----------------
 
 elif menu == "Start Interview":
+    difficulty = st.selectbox(   
+    "Select Difficulty Level",
+    ["Easy", "Medium", "Hard"],
+    key="difficulty"
+    )
+    
 
     st.header("Start Interview")
 
@@ -264,7 +270,8 @@ elif menu == "Start Interview":
             response = requests.post(
                 f"{BACKEND_URL}/start-interview",
                 headers=headers,
-                files=files
+                files=files,
+                params={"difficulty": difficulty}
             )
 
             data = response.json()
