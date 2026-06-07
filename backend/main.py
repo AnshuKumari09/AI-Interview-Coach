@@ -28,6 +28,7 @@ from database.models import (
     InterviewQuestion
 )
 from datetime import datetime
+from sqlalchemy import desc
 
 app = FastAPI()
 from pydantic import BaseModel
@@ -376,4 +377,96 @@ def test_rag():
 
     return {
         "retrieved_docs": docs
+    }
+
+@app.get("/my-interviews")
+def my_interviews(
+    user: str = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    db_user = (
+        db.query(User)
+        .filter(User.email == user)
+        .first()
+    )
+
+    interviews = (
+        db.query(InterviewSession)
+        .filter(
+            InterviewSession.user_id == db_user.id
+        )
+        .order_by(desc(InterviewSession.id))
+        .all()
+    )
+
+    result = []
+
+    for interview in interviews:
+        question_count = (
+            db.query(InterviewQuestion)
+            .filter(
+                InterviewQuestion.session_id == interview.id
+            )
+            .count()
+        )
+
+        result.append({
+            "session_id": interview.id,
+            "score": interview.score,
+            "completed_at": interview.completed_at,
+            "total_questions": question_count
+        })
+
+    return result
+
+
+@app.get("/interview-summary/{db_session_id}")
+def interview_summary(
+    db_session_id: int,
+    user: str = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    interview = (
+        db.query(InterviewSession)
+        .filter(InterviewSession.id == db_session_id)
+        .first()
+    )
+
+    if not interview:
+        raise HTTPException(
+            status_code=404,
+            detail="Interview not found"
+        )
+
+    questions = (
+        db.query(InterviewQuestion)
+        .filter(
+            InterviewQuestion.session_id == db_session_id
+        )
+        .all()
+    )
+
+    total_questions = len(questions)
+    avg_score = 0
+
+    if total_questions > 0:
+        avg_score = round(
+            sum(q.score for q in questions) / total_questions,
+            2
+        )
+
+    return {
+        "session_id": interview.id,
+        "completed_at": interview.completed_at,
+        "average_score": avg_score,
+        "total_questions": total_questions,
+        "questions": [
+            {
+                "question": q.question,
+                "answer": q.user_answer,
+                "evaluation": q.evaluation,
+                "score": q.score
+            }
+            for q in questions
+        ]
     }

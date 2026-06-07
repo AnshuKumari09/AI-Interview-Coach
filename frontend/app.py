@@ -3,7 +3,8 @@ import requests
 from streamlit_mic_recorder import mic_recorder
 import tempfile
 import threading  
-
+import plotly.express as px
+import pandas as pd 
 BACKEND_URL = "http://127.0.0.1:8000"
 
 st.title("AI Interview Coach")
@@ -53,7 +54,6 @@ if menu == "Signup":
             st.error(response.text)
 
 # ---------------- INTERVIEW HISTORY ----------------
-
 elif menu == "Interview History":
 
     st.header("📋 Interview History")
@@ -81,10 +81,49 @@ elif menu == "Interview History":
             else:
                 st.success(f"Total Interviews: {len(interviews)}")
 
+                # ✅ Score Trend Chart
+                completed = [
+                    i for i in interviews
+                    if i["score"] is not None and i["total_questions"] > 0
+                ]
+
+                if len(completed) > 0:
+                    df = pd.DataFrame({
+                        "Interview": list(range(1, len(completed) + 1)),
+                        "Score": [i["score"] for i in completed]
+                    })
+
+                    fig = px.line(
+                        df,
+                        x="Interview",
+                        y="Score",
+                        title="📈 Score Trend",
+                        markers=True,
+                        line_shape="spline"
+                    )
+
+                    fig.update_layout(
+                        yaxis_range=[0, 10],
+                        yaxis_title="Score (out of 10)",
+                        xaxis_title="Interview",
+                        hovermode="x"
+                    )
+
+                    st.plotly_chart(fig, use_container_width=True)
+
+                st.markdown("---")
+
+                # ✅ Interview Cards
                 for interview in interviews:
+                    completed_interviews = [
+                        i for i in interviews
+                        if i["score"] is not None and i["total_questions"] > 0
+                    ]
+                st.write(f"Completed Interviews: {len(completed_interviews)}")
+                for interview in completed_interviews:
                     with st.expander(
                         f"🗓 Interview #{interview['session_id']} "
-                        f"| Score: {interview['score']}/10 "
+                        f"| Score: {interview['score'] or 'N/A'}/10 "
                         f"| Questions: {interview['total_questions']}"
                     ):
                         st.write(
@@ -119,7 +158,6 @@ elif menu == "Interview History":
                                     st.markdown("---")
         else:
             st.error("Failed to fetch interviews")
-
 # ---------------- LOGIN ----------------
 
 elif menu == "Login":
