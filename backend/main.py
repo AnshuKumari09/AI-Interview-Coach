@@ -16,7 +16,6 @@ from auth.hashing import hash_password, verify_password
 from auth.jwt_handler import create_access_token
 from utils.rag.retriever import retrieve_context
 from utils.tts import text_to_speech
-from sqlalchemy import desc
 import os
 import shutil
 from utils.whisper_transcriber import transcribe_audio
@@ -208,7 +207,7 @@ def submit_answer(
                 .split("out")[0]
                 .strip()
             )
-            score = int(score_text)
+            score = round(float(score_text))
 
     except Exception:
         score = 0
@@ -232,15 +231,6 @@ def submit_answer(
 
     # Interview completed
     if session["current_question"] >= len(questions):
-        if request.session_id in interview_sessions:
-            del interview_sessions[
-                request.session_id
-            ]
-        db_user = (
-            db.query(User)
-            .filter(User.email == user)
-            .first()
-        )
 
         db_session = (
             db.query(InterviewSession)
@@ -277,19 +267,8 @@ def submit_answer(
 
         return {
             "message": "Interview Completed",
-            "evaluation": evaluation,
-            "summary": {
-                "total_questions": len(questions),
-                "average_score": avg_score,
-                "feedback":
-                (
-                    "Great effort! Keep practicing "
-                    "technical explanations and "
-                    "project discussions."
-                )
-            },
-            
-            
+            "total_questions": len(questions),
+            "average_score": avg_score,
             "evaluations": session["scores"]
         }
 
@@ -302,6 +281,7 @@ def submit_answer(
         "evaluation": evaluation,
         "next_question": next_question
     }
+
 
 
 @app.post("/mock-interview")
@@ -380,23 +360,25 @@ async def start_interview(
 
     analysis = analyze_resume(resume_text)
 
-    questions = generate_questions(resume_text)
-
-    db_user = (
-        db.query(User)
-        .filter(User.email == user)
-        .first()
+    questions = generate_questions(
+        resume_text
     )
-
+    db_user = (
+    db.query(User)
+    .filter(User.email == user)
+    .first()
+    )
     if not db_user:
         raise HTTPException(
-            status_code=404,
-            detail="User not found"
+        status_code=404,
+        detail="User not found"
         )
+   
 
     db_session = InterviewSession(
         user_id=db_user.id
     )
+        
 
     db.add(db_session)
     db.commit()
@@ -411,7 +393,6 @@ async def start_interview(
         "analysis": analysis,
         "user": user
     }
-
     intro = """
 Hello!
 
@@ -430,94 +411,9 @@ Let's begin.
         "db_session_id": db_session.id,
         "analysis": analysis,
         "intro": intro,
-        "first_question": questions[0]
+        "first_question": questions[0],
+        "total_questions": len(questions)
     }
-
-# @app.post("/start-interview")
-# async def start_interview(
-#     file: UploadFile = File(...),
-#     user: str = Depends(get_current_user),
-#     db: Session = Depends(get_db)
-# ):
-
-#     extension = file.filename.split(".")[-1].lower()
-
-#     if extension != "pdf":
-#         return {"error": "Only PDF supported"}
-
-#     unique_filename = (
-#         f"{str(uuid.uuid4())[:8]}_{file.filename}"
-#     )
-
-#     path = f"uploads/{unique_filename}"
-
-#     content = await file.read()
-
-#     with open(path, "wb") as f:
-#         f.write(content)
-
-#     resume_text = extract_pdf_text(path)
-#     resume_text = clean_text(resume_text)
-
-#     analysis = analyze_resume(resume_text)
-
-#     questions = generate_questions(
-#         resume_text
-#     )
-#     db_user = (
-#     db.query(User)
-#     .filter(User.email == user)
-#     .first()
-#     )
-#     if not db_user:
-#         raise HTTPException(
-#         status_code=404,
-#         detail="User not found"
-#         )
-   
-
-#     db_session = InterviewSession(
-#         user_id=db_user.id
-#     )
-        
-
-#     db.add(db_session)
-#     db.commit()
-#     db.refresh(db_session)
-
-#     session_id = str(uuid.uuid4())
-
-#     interview_sessions[session_id] = {
-#         "questions": questions,
-#         "current_question": 0,
-#         "scores": [],
-#         "analysis": analysis,
-#         "user": user
-#     }
-
-#     return {
-#         "session_id": session_id,
-#         "db_session_id": db_session.id,
-#         "analysis": analysis,
-#         "first_question": questions[0]
-#         return {
-#     "intro": intro,
-#     "first_question": questions[0],
-#     ...
-# }
-#         intro = """
-# Hello!
-
-# I am your AI Interviewer.
-
-# I will ask you a series of technical questions
-# based on your resume.
-
-# Try to answer clearly and confidently.
-
-# Let's begin.
-# """
-#     }
 
 @app.post("/signup")
 def signup(email: str, password: str, db: Session = Depends(get_db)):
@@ -581,109 +477,3 @@ def test_rag():
     return {
         "retrieved_docs": docs
     }
-
-
-@app.get("/interview-summary/{db_session_id}")
-def interview_summary(
-    db_session_id: int,
-    user: str = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-
-    interview = (
-        db.query(InterviewSession)
-        .filter(
-            InterviewSession.id == db_session_id
-        )
-        .first()
-    )
-
-    if not interview:
-        raise HTTPException(
-            status_code=404,
-            detail="Interview not found"
-        )
-
-    questions = (
-        db.query(InterviewQuestion)
-        .filter(
-            InterviewQuestion.session_id
-            == db_session_id
-        )
-        .all()
-    )
-
-    total_questions = len(questions)
-
-    avg_score = 0
-
-    if total_questions > 0:
-        avg_score = round(
-            sum(q.score for q in questions)
-            / total_questions,
-            2
-        )
-
-    return {
-        "session_id": interview.id,
-        "completed_at": interview.completed_at,
-        "average_score": avg_score,
-        "total_questions": total_questions,
-        "questions": [
-            {
-                "question": q.question,
-                "answer": q.user_answer,
-                "evaluation": q.evaluation,
-                "score": q.score
-            }
-            for q in questions
-        ]
-    }
-  
-  
-  
-@app.get("/my-interviews")
-def my_interviews(
-    user: str = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-
-    db_user = (
-        db.query(User)
-        .filter(User.email == user)
-        .first()
-    )
-
-    interviews = (
-        db.query(InterviewSession)
-        .filter(
-            InterviewSession.user_id
-            == db_user.id
-        )
-        .order_by(
-            desc(InterviewSession.id)
-        )
-        .all()
-    )
-
-    result = []
-
-    for interview in interviews:
-
-        question_count = (
-            db.query(InterviewQuestion)
-            .filter(
-                InterviewQuestion.session_id
-                == interview.id
-            )
-            .count()
-        )
-
-        result.append({
-            "session_id": interview.id,
-            "score": interview.score,
-            "completed_at": interview.completed_at,
-            "total_questions": question_count
-        })
-
-    return result
