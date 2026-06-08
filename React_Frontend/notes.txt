@@ -1,0 +1,8 @@
+BrowserRouter k liye npm i react-router-dom krna hota h
+bg-[radial-gradient(circle_at_50%_10%,#6d28d9_0%,transparent_40%)]//From 0% to 40% radius, show color #6d28d9, then fade into fully transparent.transparent_40% → after 40% radius, the gradient becomes invisible”
+🔥 Meaning:
+50% = horizontal center
+10% = very top (upar shift)
+
+<div className='text-xl text-center'>Practice real interview questions, get <br/> instant feedback, and improve your answers  <br/> like never before.</div>
+                    

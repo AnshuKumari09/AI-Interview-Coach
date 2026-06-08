@@ -1,8 +1,12 @@
 import React from 'react'
+import AppRoutes from './Routes/AppRoutes'
+import ProtectedRoute from './Routes/ProtectedRoute'
 
 const App = () => {
   return (
-    <div className='text-5xl'>App</div>
+    <div >
+      <AppRoutes />
+    </div>
   )
 }
 
