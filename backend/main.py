@@ -16,6 +16,7 @@ from auth.hashing import hash_password, verify_password
 from auth.jwt_handler import create_access_token
 from utils.rag.retriever import retrieve_context
 from utils.tts import text_to_speech
+from utils.qbank_extractor import extract_questions_from_bank
 import os
 import shutil
 from utils.whisper_transcriber import transcribe_audio
@@ -29,6 +30,7 @@ from database.models import (
 )
 from datetime import datetime
 from sqlalchemy import desc
+from utils.acknowledgement import generate_acknowledgement
 
 app = FastAPI()
 from pydantic import BaseModel
@@ -132,6 +134,7 @@ def submit_answer(
 
     session = interview_sessions.get(request.session_id)
 
+    
     if not session:
         return {"error": "Invalid session"}
 
@@ -152,7 +155,7 @@ def submit_answer(
             score_text = (
                 evaluation
                 .split("Score:")[1]
-                .split("out")[0]
+                .split("/")[0] 
                 .strip()
             )
             score = round(float(score_text))
@@ -212,24 +215,105 @@ def submit_answer(
             db_session.score = avg_score
 
             db.commit()
+        acknowledgement = generate_acknowledgement(
+            current_question,
+            request.answer
+        )
 
         return {
             "message": "Interview Completed",
             "total_questions": len(questions),
             "average_score": avg_score,
-            "evaluations": session["scores"]
+            "evaluations": session["scores"],
+            "acknowledgement": acknowledgement,
+            "summary": {
+            "total_questions": len(questions),
+            "average_score": avg_score,
+            "feedback": "Great effort! Keep practicing technical explanations and project discussions."
+            }
         }
 
     # Next question
     next_question = questions[
         session["current_question"]
     ]
-
+    acknowledgement = generate_acknowledgement(
+        current_question,
+        request.answer
+    )
     return {
         "evaluation": evaluation,
+        "acknowledgement": acknowledgement,
         "next_question": next_question
     }
 
+
+@app.post("/start-interview-qbank")
+async def start_interview_qbank(
+    resume: UploadFile = File(...),
+    qbank: UploadFile = File(...),
+    difficulty: str = "Medium",
+    user: str = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Resume read karo
+    resume_content = await resume.read()
+    resume_filename = f"{str(uuid.uuid4())[:8]}_{resume.filename}"
+    resume_path = f"uploads/{resume_filename}"
+    with open(resume_path, "wb") as f:
+        f.write(resume_content)
+    resume_text = extract_pdf_text(resume_path)
+    resume_text = clean_text(resume_text)
+
+    # Question bank read karo
+    qbank_content = await qbank.read()
+    qbank_filename = f"{str(uuid.uuid4())[:8]}_{qbank.filename}"
+    qbank_path = f"uploads/{qbank_filename}"
+    with open(qbank_path, "wb") as f:
+        f.write(qbank_content)
+
+    # PDF ya TXT
+    if qbank.filename.endswith(".pdf"):
+        qbank_text = extract_pdf_text(qbank_path)
+    else:
+        qbank_text = qbank_content.decode("utf-8")
+
+    qbank_text = clean_text(qbank_text)
+
+    # Questions extract karo qbank se
+    
+    questions = extract_questions_from_bank(qbank_text, difficulty, resume_text)
+
+    db_user = db.query(User).filter(User.email == user).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    db_session = InterviewSession(user_id=db_user.id)
+    db.add(db_session)
+    db.commit()
+    db.refresh(db_session)
+
+    session_id = str(uuid.uuid4())
+    interview_sessions[session_id] = {
+        "questions": questions,
+        "current_question": 0,
+        "scores": [],
+        "user": user
+    }
+
+    intro = """
+Hello! I am your AI Interviewer.
+I will ask you questions from your uploaded question bank.
+Answer clearly and confidently. Let's begin.
+"""
+
+    return {
+        "session_id": session_id,
+        "db_session_id": db_session.id,
+        "intro": intro,
+        "first_question": questions[0],
+        "total_questions": len(questions)
+    }
 
 
 @app.post("/start-interview")

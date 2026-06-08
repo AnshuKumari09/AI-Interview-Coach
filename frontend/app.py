@@ -5,6 +5,7 @@ import tempfile
 import threading  
 import plotly.express as px
 import pandas as pd 
+import time
 BACKEND_URL = "http://127.0.0.1:8000"
 
 st.title("AI Interview Coach")
@@ -114,11 +115,11 @@ elif menu == "Interview History":
                 st.markdown("---")
 
                 # ✅ Interview Cards
-                for interview in interviews:
-                    completed_interviews = [
-                        i for i in interviews
-                        if i["score"] is not None and i["total_questions"] > 0
-                    ]
+             
+                completed_interviews = [
+                    i for i in interviews
+                    if i["score"] is not None and i["total_questions"] > 0
+                ]
                 st.write(f"Completed Interviews: {len(completed_interviews)}")
                 for interview in completed_interviews:
                     with st.expander(
@@ -252,17 +253,35 @@ elif menu == "Start Interview":
     
 
     st.header("Start Interview")
+    interview_mode = st.radio(
+        "Interview Mode",
+        ["Resume Based", "Question Bank"],
+        horizontal=True
+    )
 
-    uploaded_file = st.file_uploader(
+    if interview_mode == "Question Bank":
+        question_bank = st.file_uploader(
+            "Upload Question Bank (PDF/TXT)",
+            type=["pdf", "txt"]
+        )
+        uploaded_file = None
+
+    else:
+        uploaded_file = st.file_uploader(
         "Upload Resume",
         type=["pdf"],
         key="interview_resume"
-    )
+        )
+        question_bank = None
+        
+
 
     if "recording_key" not in st.session_state:
         st.session_state["recording_key"] = 0
 
     if st.button("Start Interview"):
+        st.session_state["time_limit"] = 120
+        st.session_state["timer_start"] = time.time() 
         st.session_state["recording_key"] += 1
 
         if "last_evaluation" in st.session_state:
@@ -289,29 +308,70 @@ elif menu == "Start Interview":
         if "token" not in st.session_state:
             st.error("Please login first")
 
-        elif uploaded_file is None:
+        if interview_mode == "Resume Based" and uploaded_file is None:
             st.error("Please upload resume")
+
+        elif interview_mode == "Question Bank" and question_bank is None:
+            st.error("Please upload question bank")
 
         else:
             headers = {
                 "Authorization":
                 f"Bearer {st.session_state['token']}"
             }
-            files = {
-                "file": (
-                    uploaded_file.name,
-                    uploaded_file,
-                    "application/pdf"
-                )
-            }
+            # files = {
+            #     "file": (
+            #         uploaded_file.name,
+            #         uploaded_file,
+            #         "application/pdf"
+            #     )
+            # }
 
-            response = requests.post(
-                f"{BACKEND_URL}/start-interview",
-                headers=headers,
-                files=files,
-                params={"difficulty": difficulty}
-            )
+            # response = requests.post(
+            #     f"{BACKEND_URL}/start-interview",
+            #     headers=headers,
+            #     files=files,
+            #     params={"difficulty": difficulty}
+            # )
+            with st.spinner("Preparing interview... Please wait ⏳"):
+                if interview_mode == "Question Bank":
+                            files = {
+                                "resume": (
+                                    uploaded_file.name,
+                                    uploaded_file,
+                                    "application/pdf"
+                                ),
 
+    
+                                "qbank": (
+                                
+                                    question_bank.name,
+                                    question_bank,
+                                    "application/pdf" if question_bank.name.endswith(".pdf") else "text/plain"
+                                )
+                            }
+                
+                            response = requests.post(
+                                f"{BACKEND_URL}/start-interview-qbank",
+                                headers=headers,
+                                files=files,
+                                params={"difficulty": difficulty}
+                            )
+                else:
+                    files = { 
+                        "file": (
+                            uploaded_file.name,
+                            uploaded_file,
+                            "application/pdf"
+                        )
+                    }
+                
+                    response = requests.post(
+                        f"{BACKEND_URL}/start-interview",
+                        headers=headers,
+                        files=files,
+                        params={"difficulty": difficulty}
+                    )
             data = response.json()
 
             st.session_state["session_id"] = data["session_id"]
@@ -370,7 +430,7 @@ elif menu == "Start Interview":
 
         st.session_state["recording_key"] += 1
 
-    # ---- Question Screen ----
+# ---- Question Screen ----
     elif "question" in st.session_state:
         current = st.session_state.get("current_question_num", 1)
         total = st.session_state.get("total_questions", 5)
@@ -378,7 +438,58 @@ elif menu == "Start Interview":
             current / total,
             text=f"Question {current} of {total}"
         )
-            
+
+        # Timer display
+        time_limit = st.session_state.get("time_limit", 120)
+        elapsed = int(time.time() - st.session_state.get("timer_start", time.time()))
+        remaining = max(0, time_limit - elapsed)
+
+        st.components.v1.html(
+            f"""
+            <div id="timer" style="
+                font-size: 24px;
+                font-weight: bold;
+                padding: 10px;
+                border-radius: 8px;
+                text-align: center;
+                background-color: #1e1e1e;
+                color: white;
+            ">
+                ⏱ <span id="time">00:00</span>
+            </div>
+
+            <script>
+                var remaining = {remaining};
+                
+                function updateTimer() {{
+                    if (remaining <= 0) {{
+                        document.getElementById("time").innerText = "Time Up!";
+                        document.getElementById("timer").style.backgroundColor = "red";
+                        return;
+                    }}
+                    
+                    var minutes = Math.floor(remaining / 60);
+                    var seconds = remaining % 60;
+                    
+                    document.getElementById("time").innerText = 
+                        String(minutes).padStart(2, '0') + ':' + 
+                        String(seconds).padStart(2, '0');
+                    
+                    if (remaining <= 30) {{
+                        document.getElementById("timer").style.backgroundColor = "#ff4444";
+                    }} else {{
+                        document.getElementById("timer").style.backgroundColor = "#1e1e1e";
+                    }}
+                    
+                    remaining--;
+                    setTimeout(updateTimer, 1000);
+                }}
+                
+                updateTimer();
+            </script>
+            """,
+            height=70
+        )
 
         st.subheader("Question")
         st.write(st.session_state["question"])
@@ -399,6 +510,7 @@ elif menu == "Start Interview":
             st.markdown(st.session_state["last_evaluation"])
 
             if st.button("Next Question →"):
+                st.session_state["timer_start"] = time.time()
                 st.session_state["current_question_num"] = (
                     st.session_state.get("current_question_num", 1) + 1
                 )
@@ -498,6 +610,11 @@ elif menu == "Start Interview":
 
                 try:
                     result = response.json()
+                    if "acknowledgement" in result:
+                        threading.Thread(
+                            target=speak_async,
+                            args=(result["acknowledgement"],)
+                        ).start()
                 except:
                     st.error("Server Error")
                     st.stop()
