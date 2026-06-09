@@ -29,6 +29,7 @@ from database.models import (
     InterviewQuestion
 )
 from datetime import datetime
+from utils.followup_generator import should_ask_followup, generate_followup
 from sqlalchemy import desc
 from utils.acknowledgement import generate_acknowledgement
 from typing import Optional
@@ -119,51 +120,165 @@ def evaluate_answer_api(request: AnswerRequest):
         "evaluation": result
     }
 
+# @app.post("/submit-answer")
+# def submit_answer(
+#     request: InterviewAnswerRequest,
+#     user: str = Depends(get_current_user),
+#     db: Session = Depends(get_db)
+# ):
+    
+#     print("\n========== SUBMIT ==========")
+#     print("SESSION:", request.session_id)
+#     print("DB SESSION:", request.db_session_id)
+#     print("ANSWER:", request.answer)
+#     print("============================\n")
+
+#     session = interview_sessions.get(request.session_id)
+
+    
+#     if not session:
+#         return {"error": "Invalid session"}
+
+#     current_index = session["current_question"]
+#     questions = session["questions"]
+
+#     current_question = questions[current_index]
+
+#     evaluation = evaluate_answer(
+#         current_question,
+#         request.answer
+#     )
+
+#     score = 0
+
+#     try:
+#         if "Score:" in evaluation:
+#             score_text = (
+#                 evaluation
+#                 .split("Score:")[1]
+#                 .split("/")[0] 
+#                 .strip()
+#             )
+#             score = round(float(score_text))
+
+#     except Exception:
+#         score = 0
+
+#     # Save question record
+#     question_row = InterviewQuestion(
+#         session_id=request.db_session_id,
+#         question=current_question,
+#         user_answer=request.answer,
+#         evaluation=evaluation,
+#         score=score
+#     )
+
+#     db.add(question_row)
+#     db.commit()
+
+#     session["scores"].append(evaluation)
+
+#     # Move to next question
+#     session["current_question"] += 1
+
+#     # Interview completed
+#     if session["current_question"] >= len(questions):
+
+#         db_session = (
+#             db.query(InterviewSession)
+#             .filter(
+#                 InterviewSession.id == request.db_session_id
+#             )
+#             .first()
+#         )
+
+#         avg_score = 0
+
+#         if db_session:
+
+#             all_questions = (
+#                 db.query(InterviewQuestion)
+#                 .filter(
+#                     InterviewQuestion.session_id
+#                     == request.db_session_id
+#                 )
+#                 .all()
+#             )
+
+#             if len(all_questions) > 0:
+#                 avg_score = round(
+#                     sum(q.score for q in all_questions)
+#                     / len(all_questions),
+#                     2
+#                 )
+
+#             db_session.completed_at = datetime.utcnow()
+#             db_session.score = avg_score
+
+#             db.commit()
+#         acknowledgement = generate_acknowledgement(
+#             current_question,
+#             request.answer
+#         )
+
+#         return {
+#             "message": "Interview Completed",
+#             "total_questions": len(questions),
+#             "average_score": avg_score,
+#             "evaluations": session["scores"],
+#             "acknowledgement": acknowledgement,
+#             "summary": {
+#             "total_questions": len(questions),
+#             "average_score": avg_score,
+#             "feedback": "Great effort! Keep practicing technical explanations and project discussions."
+#             }
+#         }
+
+#     # Next question
+#     next_question = questions[
+#         session["current_question"]
+#     ]
+#     acknowledgement = generate_acknowledgement(
+#         current_question,
+#         request.answer
+#     )
+#     return {
+#         "evaluation": evaluation,
+#         "acknowledgement": acknowledgement,
+#         "next_question": next_question
+#     }
+
 @app.post("/submit-answer")
 def submit_answer(
     request: InterviewAnswerRequest,
     user: str = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    
-    print("\n========== SUBMIT ==========")
-    print("SESSION:", request.session_id)
-    print("DB SESSION:", request.db_session_id)
-    print("ANSWER:", request.answer)
-    print("============================\n")
-
     session = interview_sessions.get(request.session_id)
 
-    
     if not session:
         return {"error": "Invalid session"}
 
     current_index = session["current_question"]
     questions = session["questions"]
-
     current_question = questions[current_index]
 
-    evaluation = evaluate_answer(
-        current_question,
-        request.answer
-    )
+    evaluation = evaluate_answer(current_question, request.answer)
 
     score = 0
-
     try:
         if "Score:" in evaluation:
             score_text = (
                 evaluation
                 .split("Score:")[1]
-                .split("/")[0] 
+                .split("/")[0]
                 .strip()
             )
             score = round(float(score_text))
-
     except Exception:
         score = 0
 
-    # Save question record
+    # Save to DB
     question_row = InterviewQuestion(
         session_id=request.db_session_id,
         question=current_question,
@@ -171,11 +286,31 @@ def submit_answer(
         evaluation=evaluation,
         score=score
     )
-
     db.add(question_row)
     db.commit()
 
     session["scores"].append(evaluation)
+
+    # ✅ Follow-up logic — current_question move mat karo agar followup chahiye
+    followup_asked = session.get("followup_asked", False)
+
+    if should_ask_followup(score, request.answer) and not followup_asked:
+        followup = generate_followup(current_question, request.answer)
+        session["followup_asked"] = True
+
+        acknowledgement = generate_acknowledgement(
+            current_question, request.answer
+        )
+
+        return {
+            "evaluation": evaluation,
+            "acknowledgement": acknowledgement,
+            "next_question": followup,
+            "is_followup": True
+        }
+
+    # Reset followup flag
+    session["followup_asked"] = False
 
     # Move to next question
     session["current_question"] += 1
@@ -185,21 +320,17 @@ def submit_answer(
 
         db_session = (
             db.query(InterviewSession)
-            .filter(
-                InterviewSession.id == request.db_session_id
-            )
+            .filter(InterviewSession.id == request.db_session_id)
             .first()
         )
 
         avg_score = 0
 
         if db_session:
-
             all_questions = (
                 db.query(InterviewQuestion)
                 .filter(
-                    InterviewQuestion.session_id
-                    == request.db_session_id
+                    InterviewQuestion.session_id == request.db_session_id
                 )
                 .all()
             )
@@ -213,40 +344,35 @@ def submit_answer(
 
             db_session.completed_at = datetime.utcnow()
             db_session.score = avg_score
-
             db.commit()
+
         acknowledgement = generate_acknowledgement(
-            current_question,
-            request.answer
+            current_question, request.answer
         )
 
         return {
             "message": "Interview Completed",
-            "total_questions": len(questions),
-            "average_score": avg_score,
-            "evaluations": session["scores"],
+            "evaluation": evaluation,
             "acknowledgement": acknowledgement,
             "summary": {
-            "total_questions": len(questions),
-            "average_score": avg_score,
-            "feedback": "Great effort! Keep practicing technical explanations and project discussions."
+                "total_questions": len(questions),
+                "average_score": avg_score,
+                "feedback": "Great effort! Keep practicing technical explanations and project discussions."
             }
         }
 
-    # Next question
-    next_question = questions[
-        session["current_question"]
-    ]
+    # Next main question
+    next_question = questions[session["current_question"]]
     acknowledgement = generate_acknowledgement(
-        current_question,
-        request.answer
+        current_question, request.answer
     )
+
     return {
         "evaluation": evaluation,
         "acknowledgement": acknowledgement,
-        "next_question": next_question
+        "next_question": next_question,
+        "is_followup": False
     }
-
 
 @app.post("/start-interview-qbank")
 async def start_interview_qbank(

@@ -6,6 +6,7 @@ import threading
 import plotly.express as px
 import pandas as pd 
 import time
+import re
 BACKEND_URL = "http://127.0.0.1:8000"
 
 st.title("AI Interview Coach")
@@ -380,30 +381,45 @@ elif menu == "Start Interview":
             st.info(summary["feedback"])
 
         st.markdown("---")
-        st.success("""
-            ### Thank You
+        avg = result.get("summary", {}).get("average_score", 0)
+        if avg >= 8:
+                st.success("""
+                           
+                           ### 🌟 Outstanding Performance!
+                           You demonstrated strong technical knowledge.
+                           You are well prepared for real interviews.
+                           Keep it up! 🚀
 
-            You completed the interview successfully.
+                           """)
+        elif avg >= 5:
+                st.success("""
+                           
+                           ### 💪 Good Effort!
+                           You have a solid foundation.
+                           Focus on explaining concepts more clearly and precisely.
+                           Practice daily and you will ace your interviews! 🎯
+                          """)
+                
+        else:
+                st.success("""
+                           ### 🌱 Keep Practicing!
+                           Every expert was once a beginner.
+                           Review the correct answers above and practice again.
+                           Consistency is the key to success! 💡
+                           """)
+        if st.button("🔄 Practice Again"):
+            keys_to_clear = [
+                "question", "voice_text", "answer_text",
+                "processed_audio", "session_id", "db_session_id",
+                "last_evaluation", "pending_next_question",
+                "interview_done", "final_result"
+            ]
+            for key in keys_to_clear:
+                if key in st.session_state:
+                    del st.session_state[key]
 
-            Keep practicing consistently and focus on explaining your projects with more structure and technical depth.
-
-            Every interview improves your communication and confidence.
-
-            Best of luck for your placements and future opportunities! 🚀
-        """)
-
-        keys_to_clear = [
-            "question", "voice_text", "answer_text",
-            "processed_audio", "session_id", "db_session_id",
-            "last_evaluation", "pending_next_question",
-            "interview_done", "final_result"
-        ]
-
-        for key in keys_to_clear:
-            if key in st.session_state:
-                del st.session_state[key]
-
-        st.session_state["recording_key"] += 1
+            st.session_state["recording_key"] += 1
+            st.rerun()
 
 # ---- Question Screen ----
     elif "question" in st.session_state:
@@ -467,7 +483,9 @@ elif menu == "Start Interview":
         )
 
         st.subheader("Question")
-        st.write(st.session_state["question"])
+        question_text = st.session_state["question"]
+        question_text = re.sub(r'^[Qq]?\d+[\.\)]\s*', '', question_text).strip()
+        st.write(question_text)
 
         if st.button("🔊 Speak Question", key="speak_question"):
             threading.Thread(
@@ -483,15 +501,20 @@ elif menu == "Start Interview":
             st.markdown("---")
             st.markdown("### 📊 Your Feedback")
             st.markdown(st.session_state["last_evaluation"])
+            if st.session_state.get("is_followup", False):
+                st.info("🔍 Interviewer wants to know more...")
 
             if st.button("Next Question →"):
                 st.session_state["timer_start"] = time.time()
-                st.session_state["current_question_num"] = (
-                    st.session_state.get("current_question_num", 1) + 1
-                )
+                if not st.session_state.get("is_followup", False):
+                    st.session_state["current_question_num"] = (
+                        st.session_state.get("current_question_num", 1) + 1
+                    )
+                
                 next_q = st.session_state["pending_next_question"]
 
                 st.session_state["question"] = next_q
+                st.session_state["is_followup"] = False
 
                 if "voice_text" in st.session_state:
                     del st.session_state["voice_text"]
@@ -599,11 +622,12 @@ elif menu == "Start Interview":
 
                 if "next_question" in result:
                     st.session_state["pending_next_question"] = result["next_question"]
+                    st.session_state["is_followup"] = result.get("is_followup", False)
                     st.rerun()
 
                 else:
                     st.session_state["interview_done"] = True
                     st.session_state["final_result"] = result
-                    if "last_evaluation" in st.session_state:
-                        st.session_state["final_evaluation"] = st.session_state["last_evaluation"]
+                    if "evaluation" in result:
+                        st.session_state["last_evaluation"] = result["evaluation"]
                     st.rerun()
