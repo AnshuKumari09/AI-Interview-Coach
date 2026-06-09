@@ -31,7 +31,7 @@ from database.models import (
 from datetime import datetime
 from sqlalchemy import desc
 from utils.acknowledgement import generate_acknowledgement
-
+from typing import Optional
 app = FastAPI()
 from pydantic import BaseModel
 def get_db():
@@ -250,155 +250,122 @@ def submit_answer(
 
 @app.post("/start-interview-qbank")
 async def start_interview_qbank(
-    resume: UploadFile = File(...),
+    resume: Optional[UploadFile] = File(None),
     qbank: UploadFile = File(...),
     difficulty: str = "Medium",
+    num_questions: int = 5,
     user: str = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    # Resume read karo
-    resume_content = await resume.read()
-    resume_filename = f"{str(uuid.uuid4())[:8]}_{resume.filename}"
-    resume_path = f"uploads/{resume_filename}"
-    with open(resume_path, "wb") as f:
-        f.write(resume_content)
-    resume_text = extract_pdf_text(resume_path)
-    resume_text = clean_text(resume_text)
+    try:
 
-    # Question bank read karo
-    qbank_content = await qbank.read()
-    qbank_filename = f"{str(uuid.uuid4())[:8]}_{qbank.filename}"
-    qbank_path = f"uploads/{qbank_filename}"
-    with open(qbank_path, "wb") as f:
-        f.write(qbank_content)
+        resume_text = ""
 
-    # PDF ya TXT
-    if qbank.filename.endswith(".pdf"):
-        qbank_text = extract_pdf_text(qbank_path)
-    else:
-        qbank_text = qbank_content.decode("utf-8")
+        # Resume optional hai
+        if resume and getattr(resume, "filename", ""):
+            resume_content = await resume.read()
 
-    qbank_text = clean_text(qbank_text)
+            resume_filename = (
+                f"{str(uuid.uuid4())[:8]}_{resume.filename}"
+            )
+            resume_path = f"uploads/{resume_filename}"
 
-    # Questions extract karo qbank se
-    
-    questions = extract_questions_from_bank(qbank_text, difficulty, resume_text)
+            with open(resume_path, "wb") as f:
+                f.write(resume_content)
 
-    db_user = db.query(User).filter(User.email == user).first()
-    if not db_user:
-        raise HTTPException(status_code=404, detail="User not found")
+            resume_text = extract_pdf_text(resume_path)
+            resume_text = clean_text(resume_text)
 
-    db_session = InterviewSession(user_id=db_user.id)
-    db.add(db_session)
-    db.commit()
-    db.refresh(db_session)
+        # Question bank read
+        qbank_content = await qbank.read()
 
-    session_id = str(uuid.uuid4())
-    interview_sessions[session_id] = {
-        "questions": questions,
-        "current_question": 0,
-        "scores": [],
-        "user": user
-    }
-
-    intro = """
-Hello! I am your AI Interviewer.
-I will ask you questions from your uploaded question bank.
-Answer clearly and confidently. Let's begin.
-"""
-
-    return {
-        "session_id": session_id,
-        "db_session_id": db_session.id,
-        "intro": intro,
-        "first_question": questions[0],
-        "total_questions": len(questions)
-    }
-
-
-@app.post("/start-interview")
-async def start_interview(
-    file: UploadFile = File(...),
-    difficulty: str = "Medium",
-    user: str = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-
-    extension = file.filename.split(".")[-1].lower()
-
-    if extension != "pdf":
-        return {"error": "Only PDF supported"}
-
-    unique_filename = (
-        f"{str(uuid.uuid4())[:8]}_{file.filename}"
-    )
-
-    path = f"uploads/{unique_filename}"
-
-    content = await file.read()
-
-    with open(path, "wb") as f:
-        f.write(content)
-
-    resume_text = extract_pdf_text(path)
-    resume_text = clean_text(resume_text)
-
-    analysis = analyze_resume(resume_text)
-
-    questions = generate_questions(
-        resume_text,difficulty
-    )
-    db_user = (
-    db.query(User)
-    .filter(User.email == user)
-    .first()
-    )
-    if not db_user:
-        raise HTTPException(
-        status_code=404,
-        detail="User not found"
+        qbank_filename = (
+            f"{str(uuid.uuid4())[:8]}_{qbank.filename}"
         )
-   
+        qbank_path = f"uploads/{qbank_filename}"
 
-    db_session = InterviewSession(
-        user_id=db_user.id
-    )
-        
+        with open(qbank_path, "wb") as f:
+            f.write(qbank_content)
 
-    db.add(db_session)
-    db.commit()
-    db.refresh(db_session)
+        # PDF ya TXT
+        if qbank.filename.lower().endswith(".pdf"):
+            qbank_text = extract_pdf_text(qbank_path)
+        else:
+            qbank_text = qbank_content.decode(
+                "utf-8",
+                errors="ignore"
+            )
 
-    session_id = str(uuid.uuid4())
+        qbank_text = clean_text(qbank_text)
 
-    interview_sessions[session_id] = {
-        "questions": questions,
-        "current_question": 0,
-        "scores": [],
-        "analysis": analysis,
-        "user": user
-    }
-    intro = """
+        questions = extract_questions_from_bank(
+            qbank_text,
+            difficulty,
+            resume_text,
+            num_questions
+        )
+
+        if not questions:
+            raise HTTPException(
+                status_code=400,
+                detail="No questions found in question bank"
+            )
+
+        db_user = (
+            db.query(User)
+            .filter(User.email == user)
+            .first()
+        )
+
+        if not db_user:
+            raise HTTPException(
+                status_code=404,
+                detail="User not found"
+            )
+
+        db_session = InterviewSession(
+            user_id=db_user.id
+        )
+
+        db.add(db_session)
+        db.commit()
+        db.refresh(db_session)
+
+        session_id = str(uuid.uuid4())
+
+        interview_sessions[session_id] = {
+            "questions": questions,
+            "current_question": 0,
+            "scores": [],
+            "user": user
+        }
+
+        intro = """
 Hello!
 
 I am your AI Interviewer.
 
-I will ask you a series of technical questions
-based on your resume.
+I will ask questions from your uploaded question bank.
 
-Try to answer clearly and confidently.
+Answer clearly and confidently.
 
 Let's begin.
 """
 
-    return {
-        "session_id": session_id,
-        "db_session_id": db_session.id,
-        "analysis": analysis,
-        "intro": intro,
-        "first_question": questions[0],
-        "total_questions": len(questions)
-    }
+        return {
+            "session_id": session_id,
+            "db_session_id": db_session.id,
+            "intro": intro,
+            "first_question": questions[0],
+            "total_questions": len(questions)
+        }
+
+    except Exception as e:
+        print("QBANK ERROR:", str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
 
 @app.post("/signup")
 def signup(email: str, password: str, db: Session = Depends(get_db)):

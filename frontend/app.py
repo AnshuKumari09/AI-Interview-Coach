@@ -194,53 +194,6 @@ elif menu == "Login":
         else:
             st.error("Login Failed")
 
-# ---------------- UPLOAD RESUME ----------------
-
-elif menu == "Upload Resume":
-
-    st.header("Upload Resume")
-
-    uploaded_file = st.file_uploader(
-        "Choose Resume",
-        type=["pdf"]
-    )
-
-    if st.button("Upload Resume"):
-
-        if "token" not in st.session_state:
-            st.error("Please login first")
-
-        elif uploaded_file is None:
-            st.error("Please select a file")
-
-        else:
-
-            headers = {
-                "Authorization":
-                f"Bearer {st.session_state['token']}"
-            }
-
-            files = {
-                "file": (
-                    uploaded_file.name,
-                    uploaded_file,
-                    "application/pdf"
-                )
-            }
-
-            response = requests.post(
-                f"{BACKEND_URL}/upload-resume",
-                headers=headers,
-                files=files
-            )
-
-            data = response.json()
-            
-
-            st.json(data)
-
-            st.success("Resume Uploaded")
-
 
 # ---------------- START INTERVIEW ----------------
 
@@ -250,7 +203,13 @@ elif menu == "Start Interview":
     ["Easy", "Medium", "Hard"],
     key="difficulty"
     )
-    
+    num_questions = st.number_input(
+        "Number of Questions",
+        min_value=1,
+        max_value=20,
+        value=5,
+        step=1
+    )
 
     st.header("Start Interview")
     interview_mode = st.radio(
@@ -307,6 +266,7 @@ elif menu == "Start Interview":
 
         if "token" not in st.session_state:
             st.error("Please login first")
+            st.stop()
 
         if interview_mode == "Resume Based" and uploaded_file is None:
             st.error("Please upload resume")
@@ -336,11 +296,11 @@ elif menu == "Start Interview":
             with st.spinner("Preparing interview... Please wait ⏳"):
                 if interview_mode == "Question Bank":
                             files = {
-                                "resume": (
-                                    uploaded_file.name,
-                                    uploaded_file,
-                                    "application/pdf"
-                                ),
+                                # "resume": (
+                                #     uploaded_file.name,
+                                #     uploaded_file,
+                                #     "application/pdf"
+                                # ),
 
     
                                 "qbank": (
@@ -355,7 +315,10 @@ elif menu == "Start Interview":
                                 f"{BACKEND_URL}/start-interview-qbank",
                                 headers=headers,
                                 files=files,
-                                params={"difficulty": difficulty}
+                                params={
+                                    "difficulty": difficulty,
+                                    "num_questions": num_questions
+                                }
                             )
                 else:
                     files = { 
@@ -372,7 +335,19 @@ elif menu == "Start Interview":
                         files=files,
                         params={"difficulty": difficulty}
                     )
-            data = response.json()
+            try:
+                data = response.json()
+            except Exception:
+                st.error(f"Backend returned non-JSON response:\n{response.text}")
+                st.stop()
+            print("STATUS:", response.status_code)
+            print("TEXT:", response.text)
+            if response.status_code != 200:
+                st.error(data)
+                st.stop()
+            if "session_id" not in data:
+                st.error(f"Unexpected response: {data}")
+                st.stop()
 
             st.session_state["session_id"] = data["session_id"]
             st.session_state["db_session_id"] = data["db_session_id"]
