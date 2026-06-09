@@ -120,133 +120,6 @@ def evaluate_answer_api(request: AnswerRequest):
         "evaluation": result
     }
 
-# @app.post("/submit-answer")
-# def submit_answer(
-#     request: InterviewAnswerRequest,
-#     user: str = Depends(get_current_user),
-#     db: Session = Depends(get_db)
-# ):
-    
-#     print("\n========== SUBMIT ==========")
-#     print("SESSION:", request.session_id)
-#     print("DB SESSION:", request.db_session_id)
-#     print("ANSWER:", request.answer)
-#     print("============================\n")
-
-#     session = interview_sessions.get(request.session_id)
-
-    
-#     if not session:
-#         return {"error": "Invalid session"}
-
-#     current_index = session["current_question"]
-#     questions = session["questions"]
-
-#     current_question = questions[current_index]
-
-#     evaluation = evaluate_answer(
-#         current_question,
-#         request.answer
-#     )
-
-#     score = 0
-
-#     try:
-#         if "Score:" in evaluation:
-#             score_text = (
-#                 evaluation
-#                 .split("Score:")[1]
-#                 .split("/")[0] 
-#                 .strip()
-#             )
-#             score = round(float(score_text))
-
-#     except Exception:
-#         score = 0
-
-#     # Save question record
-#     question_row = InterviewQuestion(
-#         session_id=request.db_session_id,
-#         question=current_question,
-#         user_answer=request.answer,
-#         evaluation=evaluation,
-#         score=score
-#     )
-
-#     db.add(question_row)
-#     db.commit()
-
-#     session["scores"].append(evaluation)
-
-#     # Move to next question
-#     session["current_question"] += 1
-
-#     # Interview completed
-#     if session["current_question"] >= len(questions):
-
-#         db_session = (
-#             db.query(InterviewSession)
-#             .filter(
-#                 InterviewSession.id == request.db_session_id
-#             )
-#             .first()
-#         )
-
-#         avg_score = 0
-
-#         if db_session:
-
-#             all_questions = (
-#                 db.query(InterviewQuestion)
-#                 .filter(
-#                     InterviewQuestion.session_id
-#                     == request.db_session_id
-#                 )
-#                 .all()
-#             )
-
-#             if len(all_questions) > 0:
-#                 avg_score = round(
-#                     sum(q.score for q in all_questions)
-#                     / len(all_questions),
-#                     2
-#                 )
-
-#             db_session.completed_at = datetime.utcnow()
-#             db_session.score = avg_score
-
-#             db.commit()
-#         acknowledgement = generate_acknowledgement(
-#             current_question,
-#             request.answer
-#         )
-
-#         return {
-#             "message": "Interview Completed",
-#             "total_questions": len(questions),
-#             "average_score": avg_score,
-#             "evaluations": session["scores"],
-#             "acknowledgement": acknowledgement,
-#             "summary": {
-#             "total_questions": len(questions),
-#             "average_score": avg_score,
-#             "feedback": "Great effort! Keep practicing technical explanations and project discussions."
-#             }
-#         }
-
-#     # Next question
-#     next_question = questions[
-#         session["current_question"]
-#     ]
-#     acknowledgement = generate_acknowledgement(
-#         current_question,
-#         request.answer
-#     )
-#     return {
-#         "evaluation": evaluation,
-#         "acknowledgement": acknowledgement,
-#         "next_question": next_question
-#     }
 
 @app.post("/submit-answer")
 def submit_answer(
@@ -647,3 +520,77 @@ def interview_summary(
             for q in questions
         ]
     }
+
+@app.post("/start-interview")
+async def start_interview(
+    file: UploadFile = File(...),
+    difficulty: str = "Medium",
+    user: str = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    try:
+        extension = file.filename.split(".")[-1].lower()
+
+        if extension not in ["pdf", "docx"]:
+            return {"error": "Only PDF and DOCX supported"}
+
+        unique_filename = f"{str(uuid.uuid4())[:8]}_{file.filename}"
+        path = f"uploads/{unique_filename}"
+
+        content = await file.read()
+        with open(path, "wb") as f:
+            f.write(content)
+
+        if extension == "pdf":
+            resume_text = extract_pdf_text(path)
+        else:
+            resume_text = extract_docx_text(path)
+
+        resume_text = clean_text(resume_text)
+        analysis = analyze_resume(resume_text)
+        questions = generate_questions(resume_text, difficulty)
+
+        db_user = db.query(User).filter(User.email == user).first()
+        if not db_user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        db_session = InterviewSession(user_id=db_user.id)
+        db.add(db_session)
+        db.commit()
+        db.refresh(db_session)
+
+        session_id = str(uuid.uuid4())
+        interview_sessions[session_id] = {
+            "questions": questions,
+            "current_question": 0,
+            "scores": [],
+            "analysis": analysis,
+            "user": user
+        }
+
+        intro = """
+Hello!
+
+I am your AI Interviewer.
+
+I will ask you a series of technical questions
+based on your resume.
+
+Try to answer clearly and confidently.
+
+Let's begin.
+"""
+
+        return {
+            "session_id": session_id,
+            "db_session_id": db_session.id,
+            "analysis": analysis,
+            "intro": intro,
+            "first_question": questions[0],
+            "total_questions": len(questions)
+        }
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
