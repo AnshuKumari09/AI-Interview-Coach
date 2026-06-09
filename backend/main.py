@@ -28,8 +28,19 @@ from database.models import (
     InterviewQuestion
 )
 from datetime import datetime
-
+from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",   # React (CRA)
+        "http://localhost:5173"    # React (Vite)
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 from pydantic import BaseModel
 def get_db():
     db = SessionLocal()
@@ -73,60 +84,6 @@ def login(email: str, password: str, db: Session = Depends(get_db)):
         "access_token": token,
         "token_type": "bearer"
     }
-# @app.post("/upload-resume")
-# async def upload_resume(
-#     file: UploadFile = File(...),
-#     user: str = Depends(get_current_user)
-# ):
-
-#     # Extension nikalo
-#     extension = file.filename.split(".")[-1].lower()
-
-#     allowed_extensions = ["pdf", "docx"]
-
-#     if extension not in allowed_extensions:
-#         return {"error": "Unsupported file type"}
-
-#     content = await file.read()
-
-#     unique_id = str(uuid.uuid4())[:8]
-#     unique_filename = f"{unique_id}_{file.filename}"
-#     file_path = f"uploads/{unique_filename}"
-
-#     with open(file_path, "wb") as f:
-#         f.write(content)
-
-#     try:
-#         if extension == "pdf":
-#             text = extract_pdf_text(file_path)
-#         else:
-#             text = extract_docx_text(file_path)
-
-#         cleaned_text = clean_text(text)
-#         chunks = chunk_text(cleaned_text)
-#         embeddings = [get_embedding(c) for c in chunks]
-        
-
-#         print("TOTAL CHUNKS:", len(chunks))
-
-#         for i, c in enumerate(chunks):
-#             print(f"\nCHUNK {i+1}\n")
-    
-#             print(c[:100])
-
-#         add_chunks(chunks, embeddings)
-
-#         return {
-#             "filename": unique_filename,
-#             "text": cleaned_text,
-#             "uploaded_by": user   # 👈 important (from JWT)
-#         }
-
-#     except Exception as e:
-#         return {
-#             "message": "Failed to process resume",
-#             "error": str(e)
-#         }
 
 @app.post("/analyze-resume")
 def analyze_resume_api(request: ResumeRequest):

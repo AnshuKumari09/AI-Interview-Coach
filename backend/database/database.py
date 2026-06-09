@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-DATABASE_URL = "postgresql://postgres:Simple2026Pass@localhost:5432/ai_interview_coach"
+DATABASE_URL = "postgresql://postgres:postNishu#gremql@localhost:5432/AI-Interviewer"
 
 engine = create_engine(DATABASE_URL)
 

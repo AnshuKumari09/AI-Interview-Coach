@@ -22,6 +22,42 @@ export default function Interview() {
 const [evaluation, setEvaluation] = useState("");
 const [submitting, setSubmitting] = useState(false);
 
+  const [isListening, setIsListening] = useState(false);
+
+
+  const SpeechRecognition =
+  window.SpeechRecognition || window.webkitSpeechRecognition;
+
+const recognition = new SpeechRecognition();
+
+recognition.continuous = true;
+recognition.interimResults = true;
+recognition.lang = "en-US";
+
+console.log("TOKEN:", localStorage.getItem("token"));
+
+const startListening = () => {
+  setIsListening(true);
+
+  recognition.start();
+
+  recognition.onresult = (event) => {
+    let transcript = "";
+
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      transcript += event.results[i][0].transcript;
+    }
+
+    setAnswer(transcript);
+  };
+};
+
+
+const stopListening = () => {
+  setIsListening(false);
+  recognition.stop();
+};
+
   const startInterview = async () => {
     if (!resume) {
       alert("Please upload resume");
@@ -43,7 +79,8 @@ const [submitting, setSubmitting] = useState(false);
         formData,
         {
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${localStorage.getItem("token")}`
+            
           },
         }
       );
@@ -93,7 +130,7 @@ const [submitting, setSubmitting] = useState(false);
       },
       {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${localStorage.getItem("token")}`
         },
       }
     );
@@ -219,7 +256,7 @@ const [submitting, setSubmitting] = useState(false);
               </h3>
             </div>
 
-            <div className="mt-8">
+            {/* <div className="mt-8">
               <textarea
                     value={answer}
                     onChange={(e) =>
@@ -239,7 +276,36 @@ const [submitting, setSubmitting] = useState(false);
                     </p>
                 </div>
                 )}
+            </div> */}
+
+
+            <div className="mt-8">
+            <textarea
+              value={answer}
+              onChange={(e) => setAnswer(e.target.value)}
+              placeholder="Type or speak your answer..."
+              className="w-full h-40 bg-slate-800 rounded-xl p-4 outline-none"
+            />
+
+            <div className="flex gap-4 mt-3">
+              {!isListening ? (
+                <button
+                  onClick={startListening}
+                  className="bg-green-600 px-4 py-2 rounded-lg"
+                >
+                  🎤 Start Speaking
+                </button>
+              ) : (
+                <button
+                  onClick={stopListening}
+                  className="bg-red-600 px-4 py-2 rounded-lg"
+                >
+                  ⏹ Stop
+                </button>
+              )}
             </div>
+          </div>
+
 
             <button
                 onClick={submitAnswer}
