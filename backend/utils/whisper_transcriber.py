@@ -1,7 +1,14 @@
-import whisper
+from groq import Groq
+import os
 
-model = whisper.load_model("base")  # you can use "tiny" for speed
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-def transcribe_audio(file_path: str):
-    result = model.transcribe(file_path)
-    return result["text"]
+def transcribe_audio(file_path):
+    with open(file_path, "rb") as f:
+        transcription = client.audio.transcriptions.create(
+            file=(file_path, f.read()),
+            model="whisper-large-v3-turbo",
+            response_format="text"
+        )
+    os.remove(file_path)  # cleanup
+    return transcription

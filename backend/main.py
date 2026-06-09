@@ -19,9 +19,9 @@ from utils.tts import text_to_speech
 from utils.qbank_extractor import extract_questions_from_bank
 import os
 import shutil
-from utils.whisper_transcriber import transcribe_audio
 from utils.rag.chunker import chunk_text
 from utils.rag.embedder import get_embedding
+from fastapi.middleware.cors import CORSMiddleware
 from utils.rag.vector_db import add_chunks
 from database.models import (
     User,
@@ -35,6 +35,12 @@ from utils.acknowledgement import generate_acknowledgement
 from typing import Optional
 app = FastAPI()
 from pydantic import BaseModel
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 def get_db():
     db = SessionLocal()
     try:
@@ -386,19 +392,19 @@ def signup(email: str, password: str, db: Session = Depends(get_db)):
     return {"message": "User created successfully"}
 
 
-@app.post("/transcribe-audio")
-async def transcribe_audio_api(file: UploadFile = File(...)):
+# @app.post("/transcribe-audio")
+# async def transcribe_audio_api(file: UploadFile = File(...)):
 
-    file_name = f"{uuid.uuid4()}_{file.filename}"
+#     file_name = f"{uuid.uuid4()}_{file.filename}"
 
-    with open(file_name, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+#     with open(file_name, "wb") as buffer:
+#         shutil.copyfileobj(file.file, buffer)
 
-    text = transcribe_audio(file_name)
+#     text = transcribe_audio(file_name)
 
-    return {
-        "transcription": text
-    }
+#     return {
+#         "transcription": text
+#     }
 
 
 
@@ -594,3 +600,28 @@ Let's begin.
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+    
+
+from groq import Groq
+import tempfile
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+@app.post("/transcribe-audio")
+async def transcribe_audio_api(file: UploadFile = File(...)):
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp:
+        temp.write(await file.read())
+        temp_path = temp.name
+
+    try:
+        with open(temp_path, "rb") as audio_file:
+            transcription = client.audio.transcriptions.create(
+                file=audio_file,
+                model="whisper-large-v3-turbo"
+            )
+    finally:
+        os.remove(temp_path)  # ✅ cleanup
+
+    return {
+        "transcription": transcription.text
+    }
