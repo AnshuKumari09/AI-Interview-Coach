@@ -1,5 +1,6 @@
 from utils.llm import llm
 import uuid
+import random
 
 def generate_questions(resume_text, difficulty="Medium"):
 
@@ -44,5 +45,6 @@ def generate_questions(resume_text, difficulty="Medium"):
         for q in questions
         if q.strip() and q.strip()[0].isdigit()
     ]
+    random.shuffle(questions)
 
     return questions
