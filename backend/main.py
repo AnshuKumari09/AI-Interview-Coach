@@ -459,12 +459,23 @@ class SpeakRequest(BaseModel):
     text: str
 
 
+# @app.post("/ai-speak")
+# def ai_speak(request: SpeakRequest):
+#     text_to_speech(request.text)
+#     return {
+#         "message": "AI spoke"
+#     }
+
+from fastapi.responses import StreamingResponse
+import io
+
 @app.post("/ai-speak")
 def ai_speak(request: SpeakRequest):
-    text_to_speech(request.text)
-    return {
-        "message": "AI spoke"
-    }
+    audio_bytes = text_to_speech(request.text)
+    return StreamingResponse(
+        io.BytesIO(audio_bytes),
+        media_type="audio/mpeg"
+    )
 
 
 
