@@ -415,6 +415,70 @@ elif menu == "Start Interview":
             current / total,
             text=f"Question {current} of {total}"
         )
+    # ---- Camera Feed ----
+        st.components.v1.html(
+            """
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 10px;">
+                <div style="position: relative; width: 160px; height: 120px;">
+                    <video 
+                        id="camera" 
+                        autoplay 
+                        muted 
+                        playsinline
+                        style="
+                            width: 160px; 
+                            height: 120px; 
+                            border-radius: 12px; 
+                            object-fit: cover;
+                            border: 1px solid #334155;
+                        "
+                    ></video>
+                    <div style="
+                        position: absolute; 
+                        top: 8px; 
+                        left: 8px;
+                        display: flex;
+                        align-items: center;
+                        gap: 4px;
+                    ">
+                        <div style="
+                            width: 8px; 
+                            height: 8px; 
+                            background: #ef4444; 
+                            border-radius: 50%;
+                            animation: pulse 1.5s infinite;
+                        "></div>
+                        <span style="color: white; font-size: 11px;">Live</span>
+                    </div>
+                </div>
+            </div>
+
+            <style>
+                @keyframes pulse {
+                    0%, 100% { opacity: 1; }
+                    50% { opacity: 0.3; }
+                }
+            </style>
+
+            <script>
+                async function startCamera() {
+                    try {
+                        const stream = await navigator.mediaDevices.getUserMedia({ 
+                            video: true, 
+                            audio: false 
+                        });
+                        const video = document.getElementById("camera");
+                        video.srcObject = stream;
+                    } catch (err) {
+                        console.log("Camera error:", err);
+                    }
+                }
+                startCamera();
+            </script>
+            """,
+            height=140
+        )
+
 
         # Timer display
         time_limit = st.session_state.get("time_limit", 120)

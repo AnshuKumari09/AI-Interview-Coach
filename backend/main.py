@@ -69,6 +69,50 @@ def home():
     return {"message": "AI Interview Coach API Working"}
 
 
+# from fastapi import WebSocket, WebSocketDisconnect
+# from deepgram import DeepgramClient, LiveTranscriptionEvents, LiveOptions
+# import os
+
+# deepgram = DeepgramClient(os.getenv("DEEPGRAM_API_KEY"))
+
+# @app.websocket("/transcribe/ws")
+# async def transcribe_websocket(websocket: WebSocket):
+#     await websocket.accept()
+    
+#     try:
+#         dg_connection = deepgram.listen.websocket.v("1")
+        
+#         def on_message(self, result, **kwargs):
+#             transcript = result.channel.alternatives[0].transcript
+#             if transcript:
+#                 import asyncio
+#                 asyncio.run(websocket.send_json({
+#                     "type": "transcript",
+#                     "text": transcript,
+#                     "is_final": result.is_final
+#                 }))
+        
+#         dg_connection.on(LiveTranscriptionEvents.Transcript, on_message)
+        
+#         options = LiveOptions(
+#             model="nova-2",
+#             language="en-US",
+#             smart_format=True,
+#         )
+        
+#         dg_connection.start(options)
+        
+#         # Audio chunks receive karo aur Deepgram ko bhejo
+#         while True:
+#             audio_chunk = await websocket.receive_bytes()
+#             dg_connection.send(audio_chunk)
+            
+#     except WebSocketDisconnect:
+#         dg_connection.finish()
+#     except Exception as e:
+#         print(f"WebSocket Error: {e}")
+#         dg_connection.finish()
+
 @app.post("/login")
 def login(email: str, password: str, db: Session = Depends(get_db)):
 
@@ -329,7 +373,8 @@ async def start_interview_qbank(
             )
 
         db_session = InterviewSession(
-            user_id=db_user.id
+            user_id=db_user.id,
+            analysis=None
         )
 
         db.add(db_session)
@@ -371,6 +416,7 @@ Let's begin.
             status_code=500,
             detail=str(e)
         )
+
 
 @app.post("/signup")
 def signup(email: str, password: str, db: Session = Depends(get_db)):
@@ -415,14 +461,12 @@ class SpeakRequest(BaseModel):
 
 @app.post("/ai-speak")
 def ai_speak(request: SpeakRequest):
-
-    print("QUESTION RECEIVED:", request.text)
-
     text_to_speech(request.text)
-
     return {
         "message": "AI spoke"
     }
+
+
 
 @app.get("/test-rag")
 def test_rag():
@@ -470,7 +514,8 @@ def my_interviews(
             "session_id": interview.id,
             "score": interview.score,
             "completed_at": interview.completed_at,
-            "total_questions": question_count
+            "total_questions": question_count,
+            "analysis": interview.analysis
         })
 
     return result
@@ -560,7 +605,7 @@ async def start_interview(
         if not db_user:
             raise HTTPException(status_code=404, detail="User not found")
 
-        db_session = InterviewSession(user_id=db_user.id)
+        db_session = InterviewSession(user_id=db_user.id,analysis=analysis)
         db.add(db_session)
         db.commit()
         db.refresh(db_session)

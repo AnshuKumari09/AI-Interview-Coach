@@ -1,39 +1,39 @@
-from gtts import gTTS
-import pygame
-import tempfile
-import os
+import pythoncom
+import pyttsx3
 
-def text_to_speech(text):
-    tts = gTTS(text=text, lang='en')
+
+def text_to_speech(text: str):
+    """
+    Speak text synchronously using pyttsx3 with Windows COM initialization.
+    FastAPI calls this in a threadpool — pythoncom.CoInitialize() is required
+    so that SAPI5 (Windows TTS) works correctly in that thread.
     
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as f:
-        temp_path = f.name
-    
-    tts.save(temp_path)
-    
-    pygame.mixer.init()
-    pygame.mixer.music.stop()      # ✅ pehli awaaz band karo
-    pygame.mixer.music.load(temp_path)
-    pygame.mixer.music.play()
-    
-    # Wait for audio to finish
-    while pygame.mixer.music.get_busy():
-        pygame.time.Clock().tick(10)
-    
-    pygame.mixer.music.stop()
-    pygame.mixer.quit()
-    os.remove(temp_path)           # ✅ cleanup
+    This function BLOCKS until speech is complete, so /ai-speak only returns
+    after the AI has finished speaking — which is what the React timer needs.
+    """
+    try:
+        pythoncom.CoInitialize()          # ← required for SAPI5 in worker threads
+        engine = pyttsx3.init()
 
-# import pyttsx3
+        engine.setProperty("rate", 155)   # words per minute — adjust to taste
+        engine.setProperty("volume", 1.0)
 
-# def text_to_speech(text: str):
+        # Prefer Microsoft Zira (female) or David (male) if available
+        voices = engine.getProperty("voices")
+        for v in voices:
+            if "zira" in v.name.lower() or "david" in v.name.lower():
+                engine.setProperty("voice", v.id)
+                break
 
-#     engine = pyttsx3.init()
+        engine.say(text)
+        engine.runAndWait()
+        engine.stop()
 
-#     engine.say(text)
+    except Exception as e:
+        print(f"[TTS] Error: {e}")
 
-#     engine.runAndWait()
-
-#     engine.stop()
-
-#     return "spoken"
+    finally:
+        try:
+            pythoncom.CoUninitialize()    # ← clean up COM on this thread
+        except Exception:
+            pass

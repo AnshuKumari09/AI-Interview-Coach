@@ -6,6 +6,7 @@ import Signup from '../Pages/Auth/Signup'
 import ProtectedRoute from './ProtectedRoute'
 import Login from '../Pages/Auth/Login'
 import Interview from '../components/dashboard/interview'
+import InterviewHistory from "../components/dashboard/InterviewHistory";
 
 const AppRoutes = () => {
    const token = localStorage.getItem("token");
@@ -21,7 +22,12 @@ const AppRoutes = () => {
         <Route path='/login' element={<Login />} />
         <Route path='/interview' element={<Interview />} />
         <Route path='/landing-page' element={<LandingPage />} />
-        
+        <Route path="/history" element={
+          <ProtectedRoute>
+            <InterviewHistory />
+          </ProtectedRoute>
+        }
+          />
         
         <Route path='/dashboard' element={
           <ProtectedRoute>
