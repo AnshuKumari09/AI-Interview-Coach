@@ -233,39 +233,65 @@ function FileUpload({ label, accept, file, onChange }) {
 function InterviewScreen({ question, questionNum, totalQuestions, timerStart, onSubmit, submitting, evaluation, pendingNext, onNextQuestion, isFollowup }) {
   const [answer, setAnswer] = useState("");
   const [isListening, setIsListening] = useState(false);
-  const recognitionRef = useRef(null);
-
+ const [transcribing, setTranscribing] = useState(false);
+  const mediaRecorderRef = useRef(null);
+   const recognitionRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  
   // Reset answer on new question
   useEffect(() => {
     setAnswer("");
   }, [question]);
 
-  const startListening = () => {
-    const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert("Speech recognition not supported in this browser.");
-      return;
+  const startListening = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunksRef.current = [];
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+      mediaRecorder.start();
+      setIsListening(true);
+    } catch (err) {
+      alert("Microphone access denied. Please allow mic permission.");
+      console.error(err);
     }
-    const rec = new SpeechRecognition();
-    rec.continuous = true;
-    rec.interimResults = true;
-    rec.lang = "en-US";
-    rec.onresult = (event) => {
-      let transcript = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        transcript += event.results[i][0].transcript;
-      }
-      setAnswer(transcript);
-    };
-    rec.start();
-    recognitionRef.current = rec;
-    setIsListening(true);
   };
 
   const stopListening = () => {
-    recognitionRef.current?.stop();
+    const mediaRecorder = mediaRecorderRef.current;
+    if (!mediaRecorder) return;
+
     setIsListening(false);
+    setTranscribing(true);
+
+    mediaRecorder.onstop = async () => {
+      try {
+        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/wav" });
+        const formData = new FormData();
+        formData.append("file", audioBlob, "answer.wav");
+
+        const response = await axios.post(
+          `${BACKEND_URL}/transcribe-audio`,
+          formData
+        );
+
+        const transcription = response.data.transcription;
+        if (transcription) {
+          setAnswer((prev) => (prev ? prev + " " + transcription : transcription));
+        }
+      } catch (err) {
+        console.error("Transcription error:", err);
+        alert("Transcription failed. Please type your answer manually.");
+      } finally {
+        setTranscribing(false);
+      }
+    };
+
+    mediaRecorder.stop();
+    mediaRecorder.stream.getTracks().forEach((t) => t.stop());
   };
 
   // Sanitize question numbering prefix
@@ -340,7 +366,12 @@ function InterviewScreen({ question, questionNum, totalQuestions, timerStart, on
           />
 
           <div className="flex items-center gap-3 mt-3">
-            {!isListening ? (
+            {transcribing ? (
+              <div className="flex items-center gap-2 bg-slate-700 px-4 py-2 rounded-xl text-sm text-slate-300">
+                <Loader2 size={15} className="animate-spin" />
+                Transcribing…
+              </div>
+            ) : !isListening ? (
               <button
                 onClick={startListening}
                 className="flex items-center gap-2 bg-green-600 hover:bg-green-700 px-4 py-2 rounded-xl text-sm font-medium transition-colors"

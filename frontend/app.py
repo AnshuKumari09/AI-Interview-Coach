@@ -16,7 +16,6 @@ menu = st.sidebar.selectbox(
     [
         "Signup",
         "Login",
-        "Upload Resume",
         "Start Interview",
         "Interview History"    
     ]
@@ -280,20 +279,7 @@ elif menu == "Start Interview":
                 "Authorization":
                 f"Bearer {st.session_state['token']}"
             }
-            # files = {
-            #     "file": (
-            #         uploaded_file.name,
-            #         uploaded_file,
-            #         "application/pdf"
-            #     )
-            # }
-
-            # response = requests.post(
-            #     f"{BACKEND_URL}/start-interview",
-            #     headers=headers,
-            #     files=files,
-            #     params={"difficulty": difficulty}
-            # )
+           
             with st.spinner("Preparing interview... Please wait ⏳"):
                 if interview_mode == "Question Bank":
                             files = {
