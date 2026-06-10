@@ -1,3 +1,19 @@
+import edge_tts
+import asyncio
+
+
+async def _speak_async(text: str) -> bytes:
+    communicate = edge_tts.Communicate(text, voice="en-US-JennyNeural")
+    audio_chunks = []
+    async for chunk in communicate.stream():
+        if chunk["type"] == "audio":
+            audio_chunks.append(chunk["data"])
+    return b"".join(audio_chunks)
+
+
+def text_to_speech(text: str) -> bytes:
+    return asyncio.run(_speak_async(text))
+
 # import pythoncom
 # import pyttsx3
 
