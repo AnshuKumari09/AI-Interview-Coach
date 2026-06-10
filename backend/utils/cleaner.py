@@ -14,4 +14,7 @@ from utils.cleaner import clean_text
 # text = extract_pdf_text("uploads/resume.pdf")
 
 # cleaned = clean_text(text)
+#text = extract_pdf_text("uploads/resume.pdf")
+
+#cleaned = clean_text(text)
 
