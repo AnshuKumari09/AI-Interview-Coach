@@ -1,1 +1,57 @@
-@import 'tailwindcss'
+@import 'tailwindcss';
+
+@font-face {
+  font-family: "Bungee";
+  src: url("./assets/Bungee/Bungee-Regular.ttf");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Black_Ops";
+  src: url("./assets/Black_Ops_One/BlackOpsOne-Regular.ttf");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "plaster";
+  src: url("./assets/Plaster/Plaster-Regular.ttf");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "alpha";
+  src: url("./assets/AlfaSlabOne-Regular.ttf");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "sixty";
+  src: url("./assets/ChangaOne-Italic.ttf");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  color: aqua;
+}
+
+@font-face {
+  font-family: "lobster";
+  src: url("./assets/Lobster_Two/LobsterTwo-Regular.ttf");
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+  color: aqua;
+}
+
+@keyframes floatBlob {
+  0% { transform: translateY(0px) scale(1); }
+  50% { transform: translateY(40px) scale(1.1); }
+  100% { transform: translateY(0px) scale(1); }
+}

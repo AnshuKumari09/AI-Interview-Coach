@@ -658,3 +658,134 @@ export default function Interview() {
     </div>
   );
 }
+
+
+
+
+// import { useState } from "react";
+// import { speakAsync, startInterviewApi, submitAnswerApi } from "../../api/backend";
+// import { CompletionScreen, InterviewScreen, SetupScreen } from "../InterviewScreens";
+
+// export default function Interview() {
+//   const [phase, setPhase] = useState("setup");
+
+//   const [sessionId, setSessionId] = useState("");
+//   const [dbSessionId, setDbSessionId] = useState("");
+
+//   const [question, setQuestion] = useState("");
+//   const [questionNum, setQuestionNum] = useState(1);
+//   const [totalQuestions, setTotalQuestions] = useState(5);
+
+//   const [timerStart, setTimerStart] = useState(Date.now());
+
+//   const [evaluation, setEvaluation] = useState("");
+//   const [pendingNext, setPendingNext] = useState("");
+
+//   const [finalResult, setFinalResult] = useState(null);
+//   const [lastEvaluation, setLastEvaluation] = useState("");
+
+//   const [loading, setLoading] = useState(false);
+//   const [submitting, setSubmitting] = useState(false);
+
+//   // ───────── START ─────────
+//   const handleStart = async (data) => {
+//     const token = localStorage.getItem("token");
+
+//     setLoading(true);
+
+//     try {
+//       const res = await startInterviewApi({ ...data, token });
+//       const r = res.data;
+
+//       setSessionId(r.session_id);
+//       setDbSessionId(r.db_session_id);
+//       setQuestion(r.first_question);
+//       setTotalQuestions(r.total_questions || data.numQuestions);
+//       setTimerStart(Date.now());
+
+//       setPhase("interview");
+
+//       speakAsync(r.first_question);
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   // ───────── SUBMIT ─────────
+//   const handleSubmit = async (answer) => {
+//     const token = localStorage.getItem("token");
+//     setSubmitting(true);
+
+//     try {
+//       const res = await submitAnswerApi({
+//         sessionId,
+//         dbSessionId,
+//         answer,
+//         token
+//       });
+
+//       const r = res.data;
+
+//       setEvaluation(r.evaluation);
+//       setLastEvaluation(r.evaluation);
+
+//       if (r.next_question) {
+//         setPendingNext(r.next_question);
+//       } else {
+//         setFinalResult(r);
+//         setPhase("done");
+//       }
+//     } finally {
+//       setSubmitting(false);
+//     }
+//   };
+
+//   // ───────── NEXT ─────────
+//   const handleNext = () => {
+//     setQuestion(pendingNext);
+//     setQuestionNum((n) => n + 1);
+//     setPendingNext("");
+//     setEvaluation("");
+//     setTimerStart(Date.now());
+
+//     speakAsync(pendingNext);
+//   };
+
+//   // ───────── RESET ─────────
+//   const reset = () => {
+//     setPhase("setup");
+//     setQuestionNum(1);
+//     setEvaluation("");
+//     setFinalResult(null);
+//   };
+
+//   return (
+//     <div className="min-h-screen flex items-center justify-center bg-slate-950">
+//       {phase === "setup" && (
+//         <SetupScreen onStart={handleStart} loading={loading} />
+//       )}
+
+//       {phase === "interview" && (
+//         <InterviewScreen
+//           question={question}
+//           questionNum={questionNum}
+//           totalQuestions={totalQuestions}
+//           timerStart={timerStart}
+//           onSubmit={handleSubmit}
+//           submitting={submitting}
+//           evaluation={evaluation}
+//           pendingNext={pendingNext}
+//           onNextQuestion={handleNext}
+//         />
+//       )}
+
+//       {phase === "done" && (
+//         <CompletionScreen
+//           result={finalResult}
+//           lastEvaluation={lastEvaluation}
+//           onReset={reset}
+//         />
+//       )}
+//     </div>
+//   );
+// }

@@ -5,7 +5,8 @@ import Dashboard from '../components/dashboard/Dashboard'
 import Signup from '../Pages/Auth/Signup'
 import ProtectedRoute from './ProtectedRoute'
 import Login from '../Pages/Auth/Login'
-import Interview from '../components/dashboard/interview'
+import Interview from '../components/Interview/Interview'
+import SetUpScreen from '../components/Interview/SetUpScreen'
 
 const AppRoutes = () => {
    const token = localStorage.getItem("token");
@@ -14,12 +15,19 @@ const AppRoutes = () => {
         <Route
             path='/'
             element={
-              token ? <Dashboard /> : <LandingPage />
+              token ? <SetUpScreen /> : <LandingPage />
             }
           />
         <Route path='/signup' element={<Signup />} />
         <Route path='/login' element={<Login />} />
-        <Route path='/interview' element={<Interview />} />
+        <Route
+          path='/interview'
+          element={
+            <ProtectedRoute>
+              <Interview />
+            </ProtectedRoute>
+          }
+        />
         <Route path='/landing-page' element={<LandingPage />} />
         
         
