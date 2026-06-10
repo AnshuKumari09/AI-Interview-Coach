@@ -18,8 +18,8 @@ def generate_questions(resume_text, difficulty="Medium"):
     Difficulty Level: {difficulty}
     Instruction: {difficulty_instruction[difficulty]}
 
-    Based on the candidate's resume, generate exactly 5 UNIQUE interview questions.
-    Every time you are called, generate DIFFERENT questions than before.
+    Based on the candidate's resume
+    Generate 5 diverse interview questions. Avoid asking very similar questions.
     Do not repeat the same questions across sessions.
 
     Focus on:
@@ -28,12 +28,10 @@ def generate_questions(resume_text, difficulty="Medium"):
     - Tools and technologies used
     - Vary question types: some conceptual, some project-based, some scenario-based
 
-    Return ONLY the questions, numbered 1 to 5.
-    One question per line.
     Do not add any extra text or explanation.
+    Candidate Summary:
+    {resume_text[:2000]}
 
-    Resume:
-    {resume_text}
     """
 
     response = llm.invoke(prompt)

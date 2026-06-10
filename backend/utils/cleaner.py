@@ -1,11 +1,8 @@
 import re
 
 def clean_text(text):
-
     text = text.strip()
-
     text = re.sub(r"\s+", " ", text)
-
     return text
 
 from utils.pdf_parser import extract_pdf_text
