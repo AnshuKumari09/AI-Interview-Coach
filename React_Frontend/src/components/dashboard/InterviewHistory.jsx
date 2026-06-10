@@ -70,7 +70,8 @@ export default function InterviewHistory() {
   const completed = interviews.filter(
     (i) => i.score !== null && i.total_questions > 0
   );
-
+  const sanitize = (s) =>
+    s > 10 ? +(s / 10).toFixed(1) : +s;
   // Sequential numbering — latest = #N, oldest = #1
   const numbered = [...completed].map((item, idx) => ({
     ...item,
@@ -78,8 +79,11 @@ export default function InterviewHistory() {
   }));
 
   const chartData = [...numbered].reverse().map((i) => ({
-    name: `#${i.displayNum}`,
-    score: i.score,
+    date: `${new Date(i.completed_at).toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        })} (#${i.displayNum})`,
+    score: sanitize(i.score),
   }));
 
   const toggleExpand = async (sessionId) => {
@@ -153,7 +157,8 @@ export default function InterviewHistory() {
               </div>
               <ResponsiveContainer width="100%" height={180}>
                 <LineChart data={chartData}>
-                  <XAxis dataKey="name" stroke="#475569" tick={{ fill: "#94a3b8", fontSize: 11 }} />
+                  {/* <XAxis dataKey="name" stroke="#475569" tick={{ fill: "#94a3b8", fontSize: 11 }} /> */}
+                  <XAxis dataKey="date" tick={{ fill: "#94a3b8", fontSize: 12 }} />
                   <YAxis domain={[0, 10]} stroke="#475569" tick={{ fill: "#94a3b8", fontSize: 11 }} />
                   <Tooltip
                     contentStyle={{ background: "#1e293b", border: "1px solid #334155", borderRadius: 8, color: "#f1f5f9" }}
@@ -202,7 +207,7 @@ export default function InterviewHistory() {
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <ScoreBadge score={item.score} />
+                      <ScoreBadge score={sanitize(item.score)} />
                       {isOpen ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
                     </div>
                   </button>
@@ -223,10 +228,10 @@ export default function InterviewHistory() {
                                   Q{idx + 1}. {q.question}
                                 </p>
                                 <span className="shrink-0">
-                                  <ScoreBadge score={q.score} />
+                                  <ScoreBadge score={sanitize(q.score)} />
                                 </span>
                               </div>
-                              <ScoreBar score={q.score} />
+                              <ScoreBar score={sanitize(q.score)} />
                               <div className="bg-slate-800 rounded-lg p-3">
                                 <p className="text-xs text-slate-400 mb-1 font-medium uppercase tracking-wide">Your Answer</p>
                                 <p className="text-sm text-slate-300 leading-relaxed">{q.answer || "—"}</p>
