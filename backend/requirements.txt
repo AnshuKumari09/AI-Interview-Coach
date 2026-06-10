@@ -17,3 +17,4 @@ requests
 gtts
 pymupdf
 pypdf
+psycopg2-binary
