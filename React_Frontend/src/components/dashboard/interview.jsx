@@ -14,14 +14,14 @@ import {
   AlertCircle,
 } from "lucide-react";
 
-const BACKEND_URL = "http://127.0.0.1:8000";
+const BACKEND_URL = "http://localhost:8000";
 
 // ─────────────────────────────────────────────
 // Utility: speak via backend
 // ─────────────────────────────────────────────
 async function speakAsync(text) {
   try {
-    await axios.post(`${BACKEND_URL}/start_interview`, { text });
+    await axios.post(`${BACKEND_URL}/ai-speak`, { text });
   } catch (err) {
     console.log("Voice error", err);
   }
@@ -233,11 +233,10 @@ function FileUpload({ label, accept, file, onChange }) {
 function InterviewScreen({ question, questionNum, totalQuestions, timerStart, onSubmit, submitting, evaluation, pendingNext, onNextQuestion, isFollowup }) {
   const [answer, setAnswer] = useState("");
   const [isListening, setIsListening] = useState(false);
- const [transcribing, setTranscribing] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
   const mediaRecorderRef = useRef(null);
-   const recognitionRef = useRef(null);
   const audioChunksRef = useRef([]);
-  
+
   // Reset answer on new question
   useEffect(() => {
     setAnswer("");
