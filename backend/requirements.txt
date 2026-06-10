@@ -16,3 +16,4 @@ python-docx
 requests
 gtts
 pymupdf
+pypdf
