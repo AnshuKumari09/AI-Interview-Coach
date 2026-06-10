@@ -9,12 +9,10 @@ python-dotenv
 groq
 langchain-groq
 langchain
-sentence-transformers
-chromadb
 PyPDF2
 python-docx
 requests
-gtts
 pymupdf
 pypdf
 psycopg2-binary
+edge-tts
