@@ -16,3 +16,5 @@ pymupdf
 pypdf
 psycopg2-binary
 edge-tts
+bcrypt
+passlib
