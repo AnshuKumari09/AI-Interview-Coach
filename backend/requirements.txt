@@ -7,8 +7,6 @@ passlib[bcrypt]
 pydantic
 python-dotenv
 groq
-langchain-groq
-langchain
 PyPDF2
 python-docx
 requests
@@ -16,5 +14,3 @@ pymupdf
 pypdf
 psycopg2-binary
 edge-tts
-bcrypt
-passlib
