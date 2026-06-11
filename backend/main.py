@@ -40,6 +40,8 @@ from utils.acknowledgement import generate_acknowledgement
 from typing import Optional
 app = FastAPI()
 from pydantic import BaseModel
+# App startup pe uploads folder banao
+os.makedirs("uploads", exist_ok=True)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
