@@ -20,7 +20,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-const BACKEND_URL = "http://localhost:8000";
+const BACKEND_URL = "https://ai-interview-coach-0mp0.onrender.com";
 
 function ScoreBadge({ score }) {
   const color =
