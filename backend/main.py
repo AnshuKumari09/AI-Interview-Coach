@@ -35,9 +35,14 @@ from utils.acknowledgement import generate_acknowledgement
 from typing import Optional
 app = FastAPI()
 from pydantic import BaseModel
+# Naya — yeh karo
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://ai-interview-coach-dun-six.vercel.app",
+        "http://localhost:5173",
+    ],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
