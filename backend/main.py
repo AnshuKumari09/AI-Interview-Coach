@@ -28,6 +28,11 @@ from database.models import (
     InterviewSession,
     InterviewQuestion
 )
+from database.database import engine
+from database import models
+
+# Tables create karo automatically
+models.Base.metadata.create_all(bind=engine)
 from datetime import datetime
 from utils.followup_generator import should_ask_followup, generate_followup
 from sqlalchemy import desc
