@@ -14,15 +14,15 @@ from database.database import SessionLocal
 from auth.dependencies import get_current_user
 from auth.hashing import hash_password, verify_password
 from auth.jwt_handler import create_access_token
-from utils.rag.retriever import retrieve_context
+# from utils.rag.retriever import retrieve_context
 from utils.tts import text_to_speech
 from utils.qbank_extractor import extract_questions_from_bank
 import os
 import shutil
 from utils.rag.chunker import chunk_text
-from utils.rag.embedder import get_embedding
+# from utils.rag.embedder import get_embedding
 from fastapi.middleware.cors import CORSMiddleware
-from utils.rag.vector_db import add_chunks
+# from utils.rag.vector_db import add_chunks
 from database.models import (
     User,
     InterviewSession,
@@ -138,25 +138,25 @@ def analyze_resume_api(request: ResumeRequest):
         "analysis": result
     }
 
-@app.post("/generate-questions")
-def generate_questions_api(
-    request: QuestionRequest,
-    user: str = Depends(get_current_user)
-):
+# @app.post("/generate-questions")
+# def generate_questions_api(
+#     request: QuestionRequest,
+#     user: str = Depends(get_current_user)
+# ):
 
-    context = retrieve_context(
-        "Generate interview questions from candidate projects and skills"
-    )
+#     context = retrieve_context(
+#         "Generate interview questions from candidate projects and skills"
+#     )[:3]
 
-    questions = generate_questions(
-        "\n".join(context)
-    )
+#     questions = generate_questions(
+#         "\n".join(context)
+#     )
 
-    return {
-        "questions": questions,
-        "context_used": context,
-        "requested_by": user
-    }
+#     return {
+#         "questions": questions,
+#         "context_used": context,
+#         "requested_by": user
+#     }
 @app.post("/evaluate-answer")
 def evaluate_answer_api(request: AnswerRequest):
 
@@ -459,25 +459,36 @@ class SpeakRequest(BaseModel):
     text: str
 
 
+# @app.post("/ai-speak")
+# def ai_speak(request: SpeakRequest):
+#     text_to_speech(request.text)
+#     return {
+#         "message": "AI spoke"
+#     }
+
+from fastapi.responses import StreamingResponse
+import io
+
 @app.post("/ai-speak")
 def ai_speak(request: SpeakRequest):
-    text_to_speech(request.text)
-    return {
-        "message": "AI spoke"
-    }
-
-
-
-@app.get("/test-rag")
-def test_rag():
-
-    docs = retrieve_context(
-        "What projects are mentioned in resume?"
+    audio_bytes = text_to_speech(request.text)
+    return StreamingResponse(
+        io.BytesIO(audio_bytes),
+        media_type="audio/mpeg"
     )
 
-    return {
-        "retrieved_docs": docs
-    }
+
+
+# @app.get("/test-rag")
+# def test_rag():
+
+#     docs = retrieve_context(
+#         "What projects are mentioned in resume?"
+#     )
+
+#     return {
+#         "retrieved_docs": docs
+#     }
 
 @app.get("/my-interviews")
 def my_interviews(
@@ -599,7 +610,7 @@ async def start_interview(
 
         resume_text = clean_text(resume_text)
         analysis = analyze_resume(resume_text)
-        questions = generate_questions(resume_text, difficulty)
+        questions = generate_questions(analysis, difficulty)
 
         db_user = db.query(User).filter(User.email == user).first()
         if not db_user:
