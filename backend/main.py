@@ -14,15 +14,15 @@ from database.database import SessionLocal
 from auth.dependencies import get_current_user
 from auth.hashing import hash_password, verify_password
 from auth.jwt_handler import create_access_token
-from utils.rag.retriever import retrieve_context
+# from utils.rag.retriever import retrieve_context
 from utils.tts import text_to_speech
 from utils.qbank_extractor import extract_questions_from_bank
 import os
 import shutil
 from utils.rag.chunker import chunk_text
-from utils.rag.embedder import get_embedding
+# from utils.rag.embedder import get_embedding
 from fastapi.middleware.cors import CORSMiddleware
-from utils.rag.vector_db import add_chunks
+# from utils.rag.vector_db import add_chunks
 from database.models import (
     User,
     InterviewSession,
@@ -81,6 +81,50 @@ def home():
     return {"message": "AI Interview Coach API Working"}
 
 
+# from fastapi import WebSocket, WebSocketDisconnect
+# from deepgram import DeepgramClient, LiveTranscriptionEvents, LiveOptions
+# import os
+
+# deepgram = DeepgramClient(os.getenv("DEEPGRAM_API_KEY"))
+
+# @app.websocket("/transcribe/ws")
+# async def transcribe_websocket(websocket: WebSocket):
+#     await websocket.accept()
+    
+#     try:
+#         dg_connection = deepgram.listen.websocket.v("1")
+        
+#         def on_message(self, result, **kwargs):
+#             transcript = result.channel.alternatives[0].transcript
+#             if transcript:
+#                 import asyncio
+#                 asyncio.run(websocket.send_json({
+#                     "type": "transcript",
+#                     "text": transcript,
+#                     "is_final": result.is_final
+#                 }))
+        
+#         dg_connection.on(LiveTranscriptionEvents.Transcript, on_message)
+        
+#         options = LiveOptions(
+#             model="nova-2",
+#             language="en-US",
+#             smart_format=True,
+#         )
+        
+#         dg_connection.start(options)
+        
+#         # Audio chunks receive karo aur Deepgram ko bhejo
+#         while True:
+#             audio_chunk = await websocket.receive_bytes()
+#             dg_connection.send(audio_chunk)
+            
+#     except WebSocketDisconnect:
+#         dg_connection.finish()
+#     except Exception as e:
+#         print(f"WebSocket Error: {e}")
+#         dg_connection.finish()
+
 @app.post("/login")
 def login(email: str, password: str, db: Session = Depends(get_db)):
 
@@ -106,25 +150,25 @@ def analyze_resume_api(request: ResumeRequest):
         "analysis": result
     }
 
-@app.post("/generate-questions")
-def generate_questions_api(
-    request: QuestionRequest,
-    user: str = Depends(get_current_user)
-):
+# @app.post("/generate-questions")
+# def generate_questions_api(
+#     request: QuestionRequest,
+#     user: str = Depends(get_current_user)
+# ):
 
-    context = retrieve_context(
-        "Generate interview questions from candidate projects and skills"
-    )
+#     context = retrieve_context(
+#         "Generate interview questions from candidate projects and skills"
+#     )[:3]
 
-    questions = generate_questions(
-        "\n".join(context)
-    )
+#     questions = generate_questions(
+#         "\n".join(context)
+#     )
 
-    return {
-        "questions": questions,
-        "context_used": context,
-        "requested_by": user
-    }
+#     return {
+#         "questions": questions,
+#         "context_used": context,
+#         "requested_by": user
+#     }
 @app.post("/evaluate-answer")
 def evaluate_answer_api(request: AnswerRequest):
 
@@ -341,7 +385,8 @@ async def start_interview_qbank(
             )
 
         db_session = InterviewSession(
-            user_id=db_user.id
+            user_id=db_user.id,
+            analysis=None
         )
 
         db.add(db_session)
@@ -384,6 +429,7 @@ Let's begin.
             detail=str(e)
         )
 
+
 @app.post("/signup")
 def signup(email: str, password: str, db: Session = Depends(get_db)):
 
@@ -425,27 +471,36 @@ class SpeakRequest(BaseModel):
     text: str
 
 
+# @app.post("/ai-speak")
+# def ai_speak(request: SpeakRequest):
+#     text_to_speech(request.text)
+#     return {
+#         "message": "AI spoke"
+#     }
+
+from fastapi.responses import StreamingResponse
+import io
+
 @app.post("/ai-speak")
 def ai_speak(request: SpeakRequest):
-
-    print("QUESTION RECEIVED:", request.text)
-
-    text_to_speech(request.text)
-
-    return {
-        "message": "AI spoke"
-    }
-
-@app.get("/test-rag")
-def test_rag():
-
-    docs = retrieve_context(
-        "What projects are mentioned in resume?"
+    audio_bytes = text_to_speech(request.text)
+    return StreamingResponse(
+        io.BytesIO(audio_bytes),
+        media_type="audio/mpeg"
     )
 
-    return {
-        "retrieved_docs": docs
-    }
+
+
+# @app.get("/test-rag")
+# def test_rag():
+
+#     docs = retrieve_context(
+#         "What projects are mentioned in resume?"
+#     )
+
+#     return {
+#         "retrieved_docs": docs
+#     }
 
 @app.get("/my-interviews")
 def my_interviews(
@@ -482,7 +537,8 @@ def my_interviews(
             "session_id": interview.id,
             "score": interview.score,
             "completed_at": interview.completed_at,
-            "total_questions": question_count
+            "total_questions": question_count,
+            "analysis": interview.analysis
         })
 
     return result
@@ -566,13 +622,13 @@ async def start_interview(
 
         resume_text = clean_text(resume_text)
         analysis = analyze_resume(resume_text)
-        questions = generate_questions(resume_text, difficulty)
+        questions = generate_questions(analysis, difficulty)
 
         db_user = db.query(User).filter(User.email == user).first()
         if not db_user:
             raise HTTPException(status_code=404, detail="User not found")
 
-        db_session = InterviewSession(user_id=db_user.id)
+        db_session = InterviewSession(user_id=db_user.id,analysis=analysis)
         db.add(db_session)
         db.commit()
         db.refresh(db_session)
