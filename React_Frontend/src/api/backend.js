@@ -1,5 +1,5 @@
 import axios from "axios";
-const API="http://127.0.0.1:8000";
+const API="https://ai-interview-coach-0mp0.onrender.com";
 
 export const signup = (email,password)=>{
     return axios.post(`${API}/signup`,null,{params:{email,password}});
