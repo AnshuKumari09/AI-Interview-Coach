@@ -69,50 +69,6 @@ def home():
     return {"message": "AI Interview Coach API Working"}
 
 
-# from fastapi import WebSocket, WebSocketDisconnect
-# from deepgram import DeepgramClient, LiveTranscriptionEvents, LiveOptions
-# import os
-
-# deepgram = DeepgramClient(os.getenv("DEEPGRAM_API_KEY"))
-
-# @app.websocket("/transcribe/ws")
-# async def transcribe_websocket(websocket: WebSocket):
-#     await websocket.accept()
-    
-#     try:
-#         dg_connection = deepgram.listen.websocket.v("1")
-        
-#         def on_message(self, result, **kwargs):
-#             transcript = result.channel.alternatives[0].transcript
-#             if transcript:
-#                 import asyncio
-#                 asyncio.run(websocket.send_json({
-#                     "type": "transcript",
-#                     "text": transcript,
-#                     "is_final": result.is_final
-#                 }))
-        
-#         dg_connection.on(LiveTranscriptionEvents.Transcript, on_message)
-        
-#         options = LiveOptions(
-#             model="nova-2",
-#             language="en-US",
-#             smart_format=True,
-#         )
-        
-#         dg_connection.start(options)
-        
-#         # Audio chunks receive karo aur Deepgram ko bhejo
-#         while True:
-#             audio_chunk = await websocket.receive_bytes()
-#             dg_connection.send(audio_chunk)
-            
-#     except WebSocketDisconnect:
-#         dg_connection.finish()
-#     except Exception as e:
-#         print(f"WebSocket Error: {e}")
-#         dg_connection.finish()
-
 @app.post("/login")
 def login(email: str, password: str, db: Session = Depends(get_db)):
 
