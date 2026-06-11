@@ -35,7 +35,6 @@ from utils.acknowledgement import generate_acknowledgement
 from typing import Optional
 app = FastAPI()
 from pydantic import BaseModel
-# Naya — yeh karo
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
