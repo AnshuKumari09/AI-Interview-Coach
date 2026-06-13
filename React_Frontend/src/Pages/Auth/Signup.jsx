@@ -10,7 +10,7 @@ export default function Signup() {
   const handleSignup = async () => {
     try {
       await signup(email, password);
-      alert("Account Created Successfully");
+      // alert("Account Created Successfully");
       navigate("/login");
     } catch (err) {
       alert(err.response?.data || "Error");
