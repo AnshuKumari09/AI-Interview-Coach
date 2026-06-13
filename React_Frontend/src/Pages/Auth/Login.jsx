@@ -19,7 +19,7 @@ const Login = () => {
   const handleSubmit =async (e) => {
     e.preventDefault(); 
     try{
-      console.log(formData);
+      // console.log(formData);
       const res = await login(formData.email,formData.password);
       localStorage.setItem("token",res.data.access_token);
       // alert("login successful");
