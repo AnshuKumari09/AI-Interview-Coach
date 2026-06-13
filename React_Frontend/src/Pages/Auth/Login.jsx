@@ -1,51 +1,42 @@
-import { Link,  useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { login } from "../../api/backend";
 
 const Login = () => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
+  const [formData, setFormData] = useState({ email: "", password: "" });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-const [loading, setLoading] = useState(false);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (loading) return;
+    setError("");
+    setLoading(true);
+    try {
+      const res = await login(formData.email, formData.password);
+      localStorage.setItem("token", res.data.access_token);
+      navigate("/dashboard");
+    } catch(err) {
+      setError(err.response?.data?.detail || "Login failed. Check your credentials.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  if (loading) return;
-  setLoading(true);
-  try {
-    const res = await login(formData.email, formData.password);
-    localStorage.setItem("token", res.data.access_token);
-    navigate("/dashboard");
-  } catch(err) {
-    alert("Login failed.");
-  } finally {
-    setLoading(false);
-  }
-};
   return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4">
       <div className="w-full max-w-md bg-slate-900 p-8 rounded-2xl shadow-xl">
-        
-        <h1 className="text-3xl font-bold text-white text-center mb-2">
-          Welcome Back
-        </h1>
-
+        <h1 className="text-3xl font-bold text-white text-center mb-2">Welcome Back</h1>
         <p className="text-gray-400 text-center mb-8">
           Login to continue your AI interview practice
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          
           <div>
             <label className="block text-gray-300 mb-2">Email</label>
             <input
@@ -58,7 +49,6 @@ const handleSubmit = async (e) => {
               className="w-full p-3 rounded-lg bg-slate-800 text-white border border-slate-700 focus:outline-none focus:border-blue-500"
             />
           </div>
-
           <div>
             <label className="block text-gray-300 mb-2">Password</label>
             <input
@@ -72,20 +62,16 @@ const handleSubmit = async (e) => {
             />
           </div>
 
-          <div className="flex justify-end">
-            <Link
-              to="/forgot-password"
-              className="text-sm text-blue-500 hover:text-blue-400"
-            >
-              Forgot Password?
-            </Link>
-          </div>
+          {error && (
+            <p className="text-red-400 text-sm text-center">{error}</p>
+          )}
 
           <button
             type="submit"
-            className="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-semibold transition"
+            disabled={loading}
+            className="w-full py-3 bg-blue-600 hover:bg-blue-700 active:scale-95 active:bg-blue-800 disabled:opacity-60 rounded-lg text-white font-semibold transition-all duration-150"
           >
-            Login
+            {loading ? "Logging in..." : "Login"}
           </button>
         </form>
 
@@ -100,10 +86,8 @@ const handleSubmit = async (e) => {
         </button>
 
         <p className="text-center text-gray-400 mt-6">
-          Don’t have an account?{" "}
-          <Link to="/signup" className="text-blue-500 hover:text-blue-400">
-            Sign Up
-          </Link>
+          Don't have an account?{" "}
+          <Link to="/signup" className="text-blue-500 hover:text-blue-400">Sign Up</Link>
         </p>
       </div>
     </div>
