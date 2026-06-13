@@ -299,6 +299,7 @@ function SetupScreen({ onStart }) {
           >
             {loading ? (
               <>
+              
                 <Loader2 size={18} className="animate-spin" />
                 Preparing interview…
               </>

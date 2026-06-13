@@ -5,10 +5,11 @@ import Dashboard from '../components/dashboard/Dashboard'
 import Signup from '../Pages/Auth/Signup'
 import ProtectedRoute from './ProtectedRoute'
 import Login from '../Pages/Auth/Login'
-import Interview from '../components/Interview/Interview'
 import SetUpScreen from '../components/Interview/SetUpScreen'
-import Interview from '../components/dashboard/interview'
 import InterviewHistory from "../components/dashboard/InterviewHistory";
+import Interview from '../components/dashboard/interview'
+import Page2 from '../components/Interview/Page2'
+import Page3 from '../components/Interview/Page3'
 
 const AppRoutes = () => {
    const token = localStorage.getItem("token");
@@ -22,18 +23,24 @@ const AppRoutes = () => {
           />
         <Route path='/signup' element={<Signup />} />
         <Route path='/login' element={<Login />} />
-        <Route
-          path='/interview'
-          element={
-            <ProtectedRoute>
-              <Interview />
-            </ProtectedRoute>
-          }
-        />
+       
         <Route path='/landing-page' element={<LandingPage />} />
         <Route path="/history" element={
           <ProtectedRoute>
             <InterviewHistory />
+          </ProtectedRoute>
+        }
+          />
+          <Route path="/upload" element={
+          <ProtectedRoute>
+            <Page2 />
+          </ProtectedRoute>
+        }
+          />
+
+        <Route path="/interview" element={
+          <ProtectedRoute>
+            <Page3 />
           </ProtectedRoute>
         }
           />
