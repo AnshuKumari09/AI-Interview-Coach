@@ -3,7 +3,7 @@ import { useState } from "react";
 import { login } from "../../api/backend";
 
 const Login = () => {
-  const Navigate = useNavigate();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -22,8 +22,8 @@ const Login = () => {
       console.log(formData);
       const res = await login(formData.email,formData.password);
       localStorage.setItem("token",res.data.access_token);
-      alert("login successful");
-      Navigate("/dashboard");
+      // alert("login successful");
+      navigate("/dashboard");
     }catch(err){
       console.log(err);
       alert("login failed");
