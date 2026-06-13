@@ -16,20 +16,22 @@ const Login = () => {
     });
   };
 
-  const handleSubmit =async (e) => {
-    e.preventDefault(); 
-    try{
-      // console.log(formData);
-      const res = await login(formData.email,formData.password);
-      localStorage.setItem("token",res.data.access_token);
-      // alert("login successful");
-      navigate("/dashboard");
-    }catch(err){
-      console.log(err);
-      alert("login failed");
-    }
-  };
+const [loading, setLoading] = useState(false);
 
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  if (loading) return;
+  setLoading(true);
+  try {
+    const res = await login(formData.email, formData.password);
+    localStorage.setItem("token", res.data.access_token);
+    navigate("/dashboard");
+  } catch(err) {
+    alert("Login failed.");
+  } finally {
+    setLoading(false);
+  }
+};
   return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4">
       <div className="w-full max-w-md bg-slate-900 p-8 rounded-2xl shadow-xl">
