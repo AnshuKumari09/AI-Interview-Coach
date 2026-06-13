@@ -7,15 +7,20 @@ export default function Signup() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleSignup = async () => {
-    try {
-      await signup(email, password);
-      // alert("Account Created Successfully");
-      navigate("/login");
-    } catch (err) {
-      alert(err.response?.data || "Error");
-    }
-  };
+const [loading, setLoading] = useState(false);
+
+const handleSignup = async () => {
+  if (loading) return;
+  setLoading(true);
+  try {
+    // existing signup code
+    navigate("/login");
+  } catch(err) {
+    alert("Signup failed.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100">
