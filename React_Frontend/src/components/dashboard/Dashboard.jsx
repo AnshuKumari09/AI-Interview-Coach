@@ -143,64 +143,99 @@ export default function Dashboard() {
         </button>
       </div>
 
-      {/* Stats */}
-      {token && (
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
-          <StatCard
-            icon={<Trophy className="text-yellow-400" />}
-            label="Interviews Taken"
-            value={totalTaken}
-          />
+{/* Dashboard Grid */}
+<div className="grid lg:grid-cols-3 gap-6 mb-8">
 
-          <StatCard
-            icon={<BarChart3 className="text-green-400" />}
-            label="Average Score"
-            value={avgScore}
-          />
-        </div>
-      )}
+  {/* Left Side */}
+  <div className="lg:col-span-2 space-y-6">
 
-      {/* Recommended Practice */}
-      <div className="bg-slate-800 rounded-2xl p-6">
-        <h2 className="text-xl font-semibold mb-5">
-          Recommended Practice
-        </h2>
+    {/* Stats */}
+    <div className="grid md:grid-cols-3 gap-4">
+      <StatCard
+        icon={<Trophy className="text-yellow-400" />}
+        label="Interviews Taken"
+        value={totalTaken}
+      />
 
+      <StatCard
+        icon={<BarChart3 className="text-green-400" />}
+        label="Average Score"
+        value={avgScore ? `${avgScore}/10` : "0/10"}
+      />
+
+      <StatCard
+        icon={<Clock className="text-blue-400" />}
+        label="Practice Sessions"
+        value={interviews.length}
+      />
+    </div>
+
+    {/* Recent Interviews */}
+    <div className="bg-slate-800 rounded-2xl p-6">
+      <h2 className="text-xl font-semibold mb-5">
+        Recent Interviews
+      </h2>
+
+      {recentThree.length === 0 ? (
+        <p className="text-slate-400">
+          No interviews yet.
+        </p>
+      ) : (
         <div className="space-y-4">
-          {[
-            "React Hooks",
-            "Redux",
-            "System Design",
-            "Behavioral Questions",
-          ].map((topic) => (
+          {recentThree.map((interview) => (
             <div
-              key={topic}
-              onClick={() =>
-                token
-                  ? navigate("/interview")
-                  : navigate("/login")
-              }
-              className="flex justify-between items-center bg-slate-700 p-4 rounded-xl hover:bg-slate-600 transition cursor-pointer"
+              key={interview.id}
+              className="bg-slate-700 rounded-xl p-4 flex justify-between items-center"
             >
-              <span>{topic}</span>
-              <ArrowRight />
+              <div>
+                <h3 className="font-semibold">
+                  Interview #{interview.displayNum}
+                </h3>
+
+                <p className="text-sm text-slate-400">
+                  {interview.total_questions} questions ·{" "}
+                  {new Date(
+                    interview.created_at
+                  ).toLocaleDateString()}
+                </p>
+              </div>
+
+              <div className="text-xl font-bold text-violet-400">
+                {sanitize(interview.score)}/10
+              </div>
             </div>
           ))}
         </div>
-      </div>
+      )}
     </div>
-  );
-}
+  </div>
 
-function StatCard({ icon, label, value }) {
-  return (
-    <div className="bg-slate-800 rounded-2xl p-6">
-      <div className="flex items-center gap-3">
-        {icon}
-        <h3 className="font-semibold">{label}</h3>
-      </div>
+  {/* Right Side */}
+  <div className="bg-slate-800 rounded-2xl p-6">
+    <h2 className="text-xl font-semibold mb-5">
+      Recommended Practice
+    </h2>
 
-      <p className="text-3xl font-bold mt-4">{value}</p>
+    <div className="space-y-4">
+      {[
+        "React Hooks",
+        "Redux",
+        "System Design",
+        "Behavioral Questions",
+      ].map((topic) => (
+        <div
+          key={topic}
+          onClick={() =>
+            token
+              ? navigate("/interview")
+              : navigate("/login")
+          }
+          className="flex justify-between items-center bg-slate-700 p-4 rounded-xl hover:bg-slate-600 transition cursor-pointer"
+        >
+          <span>{topic}</span>
+          <ArrowRight />
+        </div>
+      ))}
     </div>
-  );
-}
+  </div>
+</div>
