@@ -51,6 +51,7 @@ export default function Dashboard() {
       });
   }, []);
 
+  // ── Derived stats ──────────────────────────────────────────────────────────
   const completed = interviews.filter(
     (i) => i.score !== null && i.total_questions > 0
   );
@@ -62,28 +63,29 @@ export default function Dashboard() {
 
   const sanitizedScores = completed.map((i) => sanitize(i.score));
 
-const avgScore =
-  sanitizedScores.length > 0
-    ? (
-        sanitizedScores.reduce((a, b) => a + b, 0) /
-        sanitizedScores.length
-      ).toFixed(1)
-    : "0";
+  const avgScore =
+    sanitizedScores.length > 0
+      ? (
+          sanitizedScores.reduce((a, b) => a + b, 0) /
+          sanitizedScores.length
+        ).toFixed(1)
+      : null;
 
-const numberedCompleted = completed.map((item, idx) => ({
-  ...item,
-  displayNum: completed.length - idx,
-}));
+  const numberedCompleted = completed.map((item, idx) => ({
+    ...item,
+    displayNum: completed.length - idx,
+  }));
 
-const recentThree = numberedCompleted.slice(0, 3);
+  const recentThree = numberedCompleted.slice(0, 3);
 
-if (loading) {
-  return (
-    <div className="min-h-screen bg-[#0F172A] flex items-center justify-center">
-      <Loader2 className="animate-spin w-10 h-10 text-violet-500" />
-    </div>
-  );
-}
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0F172A] flex items-center justify-center">
+        <Loader2 className="animate-spin w-10 h-10 text-violet-500" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#0F172A] text-white p-8">
       {/* Header */}
@@ -126,35 +128,11 @@ if (loading) {
             </>
           )}
         </div>
-
-// ─── Small helper component ───────────────────────────────────────────────────
-function StatCard({ icon, label, value }) {
-  return (
-    <div className="bg-slate-800 rounded-2xl p-6">
-      <div className="flex items-center gap-3">
-        {icon}
-        <h3 className="font-semibold">{label}</h3>
       </div>
-
-      <p className="text-3xl font-bold mt-4">
-        {value === null ? (
-          <Loader2
-            size={24}
-            className="animate-spin text-slate-500"
-          />
-        ) : (
-          value
-        )}
-      </p>
-    </div>
-  );
-}
 
       {/* Hero Section */}
       <div className="bg-gradient-to-r from-violet-700 to-indigo-700 rounded-3xl p-8 mb-8 shadow-xl">
-        <h2 className="text-3xl font-bold mb-3">
-          AI Mock Interview
-        </h2>
+        <h2 className="text-3xl font-bold mb-3">AI Mock Interview</h2>
 
         <p className="text-violet-100 mb-6 max-w-xl">
           Practice with an AI interviewer and receive detailed feedback on
@@ -177,25 +155,19 @@ function StatCard({ icon, label, value }) {
         <StatCard
           icon={<BarChart3 className="text-violet-400" />}
           label="Interviews Taken"
-          value={loading ? null : totalTaken}
+          value={totalTaken}
         />
 
         <StatCard
           icon={<Trophy className="text-yellow-400" />}
           label="Average Score"
-          value={
-            loading
-              ? null
-              : avgScore !== null
-              ? `${avgScore}/10`
-              : "—"
-          }
+          value={avgScore !== null ? `${avgScore}/10` : "—"}
         />
 
         <StatCard
           icon={<Clock className="text-green-400" />}
           label="Practice Sessions"
-          value={loading ? null : interviews.length}
+          value={interviews.length}
         />
       </div>
 
@@ -204,9 +176,7 @@ function StatCard({ icon, label, value }) {
         {/* Recent Interviews */}
         <div className="bg-slate-800 rounded-2xl p-6">
           <div className="flex items-center justify-between mb-5">
-            <h2 className="text-xl font-semibold">
-              Recent Interviews
-            </h2>
+            <h2 className="text-xl font-semibold">Recent Interviews</h2>
 
             {completed.length > 3 && (
               <button
@@ -218,84 +188,63 @@ function StatCard({ icon, label, value }) {
             )}
           </div>
 
-          {loading ? (
-            <div className="flex items-center gap-2 text-slate-400 text-sm">
-              <Loader2 size={15} className="animate-spin" />
-              Loading...
-            </div>
-          ) : recentThree.length === 0 ? (
+          {recentThree.length === 0 ? (
             <p className="text-slate-400 text-sm">
-              No completed interviews yet.
+              No completed interviews yet.{" "}
+              <button
+                onClick={() =>
+                  token ? navigate("/interview") : navigate("/login")
+                }
+                className="text-violet-400 hover:underline"
+              >
+                Start one now →
+              </button>
             </p>
           ) : (
             <div className="space-y-4">
-              {recentThree.map((item) => (
-                <div
-                  key={item.session_id}
-                  className="flex justify-between items-center border-b border-slate-700 pb-3"
-                >
-                  <div>
-                    <p className="text-sm font-medium">
-                      Interview #{item.displayNum}
-                    </p>
-
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      {item.total_questions} questions
-                      {item.completed_at
-                        ? ` · ${new Date(
-                            item.completed_at
-                          ).toLocaleDateString()}`
-                        : ""}
-                    </p>
-                  </div>
-
-                  <span
-                    className={`font-semibold text-sm ${
-                      item.score >= 7
-                        ? "text-green-400"
-                        : item.score >= 5
-                        ? "text-yellow-400"
-                        : "text-red-400"
-                    }`}
+              {recentThree.map((item) => {
+                const score = sanitize(item.score);
+                return (
+                  <div
+                    key={item.session_id}
+                    className="flex justify-between items-center border-b border-slate-700 pb-3"
                   >
-                    {item.score}/10
-                  </span>
-                </div>
-              ))}
+                    <div>
+                      <p className="text-sm font-medium">
+                        Interview #{item.displayNum}
+                      </p>
+
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        {item.total_questions} questions
+                        {item.completed_at
+                          ? ` · ${new Date(
+                              item.completed_at
+                            ).toLocaleDateString()}`
+                          : ""}
+                      </p>
+                    </div>
+
+                    <span
+                      className={`font-semibold text-sm ${
+                        score >= 7
+                          ? "text-green-400"
+                          : score >= 5
+                          ? "text-yellow-400"
+                          : "text-red-400"
+                      }`}
+                    >
+                      {score}/10
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
-      </div>
-  );
-}
-
-function StatCard({ icon, label, value }) {
-  return (
-    <div className="bg-slate-800 rounded-2xl p-6">
-      <div className="flex items-center gap-3">
-        {icon}
-        <h3 className="font-semibold">{label}</h3>
-      </div>
-
-      <p className="text-3xl font-bold mt-4">
-        {value === null ? (
-          <Loader2
-            size={24}
-            className="animate-spin text-slate-500"
-          />
-        ) : (
-          value
-        )}
-      </p>
-    </div>
-  );
-}
 
         {/* Recommended Practice */}
         <div className="bg-slate-800 rounded-2xl p-6">
-          <h2 className="text-xl font-semibold mb-5">
-            Recommended Practice
-          </h2>
+          <h2 className="text-xl font-semibold mb-5">Recommended Practice</h2>
 
           <div className="space-y-4">
             {[
@@ -307,9 +256,7 @@ function StatCard({ icon, label, value }) {
               <div
                 key={topic}
                 onClick={() =>
-                  token
-                    ? navigate("/interview")
-                    : navigate("/login")
+                  token ? navigate("/interview") : navigate("/login")
                 }
                 className="flex justify-between items-center bg-slate-700 p-4 rounded-xl hover:bg-slate-600 transition cursor-pointer"
               >
@@ -320,3 +267,20 @@ function StatCard({ icon, label, value }) {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── Small helper component ───────────────────────────────────────────────────
+function StatCard({ icon, label, value }) {
+  return (
+    <div className="bg-slate-800 rounded-2xl p-6">
+      <div className="flex items-center gap-3">
+        {icon}
+        <h3 className="font-semibold">{label}</h3>
+      </div>
+
+      <p className="text-3xl font-bold mt-4">{value}</p>
+    </div>
+  );
+}
