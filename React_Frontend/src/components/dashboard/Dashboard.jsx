@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   Play,
+  Clock,
   Trophy,
   BarChart3,
   ArrowRight,
