@@ -31,7 +31,7 @@ function formatTime(secs) {
 }
 
 function stripLeadingNumber(text = "") {
-  return text.replace(/^[Qq]?\d+[\.\)]\s*/, "").trim();
+  return text.replace(/^([Qq]?\d+[\.\)]\s*)+/, "").trim();
 }
 
 // ─── CameraFeed ───────────────────────────────────────────────────────────────
