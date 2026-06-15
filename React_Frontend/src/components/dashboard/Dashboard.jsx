@@ -149,93 +149,131 @@ export default function Dashboard() {
   {/* Left Side */}
   <div className="lg:col-span-2 space-y-6">
 
-    {/* Stats */}
-    <div className="grid md:grid-cols-3 gap-4">
-      <StatCard
-        icon={<Trophy className="text-yellow-400" />}
-        label="Interviews Taken"
-        value={totalTaken}
-      />
+      {/* Stats */}
+      <div className="grid md:grid-cols-3 gap-6 mb-8">
+        <StatCard
+          icon={<BarChart3 className="text-violet-400" />}
+          label="Interviews Taken"
+          value={loading ? null : totalTaken}
+        />
+        <StatCard
+          icon={<Trophy className="text-yellow-400" />}
+          label="Average Score"
+          value={loading ? null : avgScore !== null ? `${avgScore}/10` : "—"}
+        />
+        <StatCard
+          icon={<Clock className="text-green-400" />}
+          label="Practice Sessions"
+          value={loading ? null : interviews.length}
+        />
+      </div>
 
-      <StatCard
-        icon={<BarChart3 className="text-green-400" />}
-        label="Average Score"
-        value={avgScore ? `${avgScore}/10` : "0/10"}
-      />
+      {/* Bottom section */}
+      <div className="grid lg:grid-cols-2 gap-6">
+        {/* Recent Interviews */}
+        <div className="bg-slate-800 rounded-2xl p-6">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-xl font-semibold">Recent Interviews</h2>
+            {completed.length > 3 && (
+              <button
+                onClick={() => navigate("/history")}
+                className="text-violet-400 text-sm hover:underline flex items-center gap-1"
+              >
+                View all <ArrowRight size={14} />
+              </button>
+            )}
+          </div>
 
-      <StatCard
-        icon={<Clock className="text-blue-400" />}
-        label="Practice Sessions"
-        value={interviews.length}
-      />
-    </div>
-
-    {/* Recent Interviews */}
-    <div className="bg-slate-800 rounded-2xl p-6">
-      <h2 className="text-xl font-semibold mb-5">
-        Recent Interviews
-      </h2>
-
-      {recentThree.length === 0 ? (
-        <p className="text-slate-400">
-          No interviews yet.
-        </p>
-      ) : (
-        <div className="space-y-4">
-          {recentThree.map((interview) => (
-            <div
-              key={interview.id}
-              className="bg-slate-700 rounded-xl p-4 flex justify-between items-center"
-            >
-              <div>
-                <h3 className="font-semibold">
-                  Interview #{interview.displayNum}
-                </h3>
-
-                <p className="text-sm text-slate-400">
-                  {interview.total_questions} questions ·{" "}
-                  {new Date(
-                    interview.created_at
-                  ).toLocaleDateString()}
-                </p>
-              </div>
-
-              <div className="text-xl font-bold text-violet-400">
-                {sanitize(interview.score)}/10
-              </div>
+          {loading ? (
+            <div className="flex items-center gap-2 text-slate-400 text-sm">
+              <Loader2 size={15} className="animate-spin" /> Loading…
             </div>
-          ))}
+          ) : recentThree.length === 0 ? (
+            <p className="text-slate-400 text-sm">
+              No completed interviews yet.{" "}
+              <button
+                onClick={() => navigate("/interview")}
+                className="text-violet-400 hover:underline"
+              >
+                Start one now →
+              </button>
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {recentThree.map((item) => (
+                <div
+                  key={item.session_id}
+                  className="flex justify-between items-center border-b border-slate-700 pb-3"
+                >
+                  <div>
+                    <p className="text-sm font-medium">
+                      Interview #{item.displayNum}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      {item.total_questions} questions
+                      {item.completed_at
+                        ? ` · ${new Date(item.completed_at).toLocaleDateString()}`
+                        : ""}
+                    </p>
+                  </div>
+                  <span
+                    className={`font-semibold text-sm ${
+                      item.score >= 7
+                        ? "text-green-400"
+                        : item.score >= 5
+                        ? "text-yellow-400"
+                        : "text-red-400"
+                    }`}
+                  >
+                    {item.score}/10
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-      )}
-    </div>
-  </div>
 
-  {/* Right Side */}
-  <div className="bg-slate-800 rounded-2xl p-6">
-    <h2 className="text-xl font-semibold mb-5">
-      Recommended Practice
-    </h2>
-
-    <div className="space-y-4">
-      {[
-        "React Hooks",
-        "Redux",
-        "System Design",
-        "Behavioral Questions",
-      ].map((topic) => (
-        <div
-          key={topic}
-          onClick={() =>
-            token
-              ? navigate("/interview")
-              : navigate("/login")
-          }
-          className="flex justify-between items-center bg-slate-700 p-4 rounded-xl hover:bg-slate-600 transition cursor-pointer"
-        >
-          <span>{topic}</span>
-          <ArrowRight />
+        {/* Recommended Practice */}
+        <div className="bg-slate-800 rounded-2xl p-6">
+          <h2 className="text-xl font-semibold mb-5">Recommended Practice</h2>
+          <div className="space-y-4">
+            {[
+              "React Hooks",
+              "Redux",
+              "System Design",
+              "Behavioral Questions",
+            ].map((topic) => (
+              <div
+                key={topic}
+                onClick={() => navigate("/interview")}
+                className="flex justify-between items-center bg-slate-700 p-4 rounded-xl hover:bg-slate-600 transition cursor-pointer"
+              >
+                <span>{topic}</span>
+                <ArrowRight />
+              </div>
+            ))}
+          </div>
         </div>
-      ))}
+      </div>
     </div>
-  </div>
-</div>
+  );
+}
+
+// ─── Small helper component ───────────────────────────────────────────────────
+function StatCard({ icon, label, value }) {
+  return (
+    <div className="bg-slate-800 rounded-2xl p-6">
+      <div className="flex items-center gap-3">
+        {icon}
+        <h3 className="font-semibold">{label}</h3>
+      </div>
+      <p className="text-3xl font-bold mt-4">
+        {value === null ? (
+          <Loader2 size={24} className="animate-spin text-slate-500" />
+        ) : (
+          value
+        )}
+      </p>
+    </div>
+  );
+}
