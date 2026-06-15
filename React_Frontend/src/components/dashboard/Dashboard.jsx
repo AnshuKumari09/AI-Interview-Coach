@@ -127,6 +127,33 @@ if (loading) {
           )}
         </div>
       </div>
+    </div>   {/* min-h-screen wala main div close */}
+
+  );
+}
+
+// ─── Small helper component ───────────────────────────────────────────────────
+function StatCard({ icon, label, value }) {
+  return (
+    <div className="bg-slate-800 rounded-2xl p-6">
+      <div className="flex items-center gap-3">
+        {icon}
+        <h3 className="font-semibold">{label}</h3>
+      </div>
+
+      <p className="text-3xl font-bold mt-4">
+        {value === null ? (
+          <Loader2
+            size={24}
+            className="animate-spin text-slate-500"
+          />
+        ) : (
+          value
+        )}
+      </p>
+    </div>
+  );
+}
 
       {/* Hero Section */}
       <div className="bg-gradient-to-r from-violet-700 to-indigo-700 rounded-3xl p-8 mb-8 shadow-xl">
