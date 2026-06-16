@@ -2,6 +2,10 @@ import React, { useEffect, useRef, useState } from 'react'
 import { BsRobot } from "react-icons/bs";
  import { useLocation } from "react-router-dom";
 
+ function stripLeadingNumber(text = "") {
+  return text.replace(/^([Qq]?\d+[\.\)]\s*)+/, "").trim();
+}
+
 const InterviewRoomSidebar = ({ conversations=[] }) => {
 
 
@@ -26,7 +30,7 @@ useEffect(() => {
               <div className="h-16 flex items-center px-6 border-b border-white/10">
                 <div className="flex items-center gap-2">
                   <BsRobot className="text-2xl text-violet-400" />
-                  <h1 className="font-semibold text-lg">Talently.ai</h1>
+                  <h1 className="font-semibold text-lg">AICoach</h1>
                 </div>
               </div>
     
@@ -35,7 +39,7 @@ useEffect(() => {
                 <h3 className="text-lg text-gray-400 mb-6">
                   Conversations
                 </h3>
-    
+              
                 <div className="space-y-6">
                   <div className="space-y-6">
 
@@ -70,7 +74,11 @@ useEffect(() => {
                             : "Interview Bot"}
                         </p>
 
-                        <p className='text-xl'>{item.message}</p>
+                        <p className="text-xl">
+                          {item.type === "question"
+                            ? stripLeadingNumber(item.message)
+                            : item.message}
+                        </p>
                       </div>
                     </div>
                   ))

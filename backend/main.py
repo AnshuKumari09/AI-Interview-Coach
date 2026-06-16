@@ -80,51 +80,6 @@ class InterviewAnswerRequest(BaseModel):
 def home():
     return {"message": "AI Interview Coach API Working"}
 
-
-# from fastapi import WebSocket, WebSocketDisconnect
-# from deepgram import DeepgramClient, LiveTranscriptionEvents, LiveOptions
-# import os
-
-# deepgram = DeepgramClient(os.getenv("DEEPGRAM_API_KEY"))
-
-# @app.websocket("/transcribe/ws")
-# async def transcribe_websocket(websocket: WebSocket):
-#     await websocket.accept()
-    
-#     try:
-#         dg_connection = deepgram.listen.websocket.v("1")
-        
-#         def on_message(self, result, **kwargs):
-#             transcript = result.channel.alternatives[0].transcript
-#             if transcript:
-#                 import asyncio
-#                 asyncio.run(websocket.send_json({
-#                     "type": "transcript",
-#                     "text": transcript,
-#                     "is_final": result.is_final
-#                 }))
-        
-#         dg_connection.on(LiveTranscriptionEvents.Transcript, on_message)
-        
-#         options = LiveOptions(
-#             model="nova-2",
-#             language="en-US",
-#             smart_format=True,
-#         )
-        
-#         dg_connection.start(options)
-        
-#         # Audio chunks receive karo aur Deepgram ko bhejo
-#         while True:
-#             audio_chunk = await websocket.receive_bytes()
-#             dg_connection.send(audio_chunk)
-            
-#     except WebSocketDisconnect:
-#         dg_connection.finish()
-#     except Exception as e:
-#         print(f"WebSocket Error: {e}")
-#         dg_connection.finish()
-
 @app.post("/login")
 def login(email: str, password: str, db: Session = Depends(get_db)):
 
@@ -150,25 +105,7 @@ def analyze_resume_api(request: ResumeRequest):
         "analysis": result
     }
 
-# @app.post("/generate-questions")
-# def generate_questions_api(
-#     request: QuestionRequest,
-#     user: str = Depends(get_current_user)
-# ):
 
-#     context = retrieve_context(
-#         "Generate interview questions from candidate projects and skills"
-#     )[:3]
-
-#     questions = generate_questions(
-#         "\n".join(context)
-#     )
-
-#     return {
-#         "questions": questions,
-#         "context_used": context,
-#         "requested_by": user
-#     }
 @app.post("/evaluate-answer")
 def evaluate_answer_api(request: AnswerRequest):
 
@@ -450,22 +387,6 @@ def signup(email: str, password: str, db: Session = Depends(get_db)):
     return {"message": "User created successfully"}
 
 
-# @app.post("/transcribe-audio")
-# async def transcribe_audio_api(file: UploadFile = File(...)):
-
-#     file_name = f"{uuid.uuid4()}_{file.filename}"
-
-#     with open(file_name, "wb") as buffer:
-#         shutil.copyfileobj(file.file, buffer)
-
-#     text = transcribe_audio(file_name)
-
-#     return {
-#         "transcription": text
-#     }
-
-
-
 
 class SpeakRequest(BaseModel):
     text: str
@@ -489,18 +410,6 @@ def ai_speak(request: SpeakRequest):
         media_type="audio/mpeg"
     )
 
-
-
-# @app.get("/test-rag")
-# def test_rag():
-
-#     docs = retrieve_context(
-#         "What projects are mentioned in resume?"
-#     )
-
-#     return {
-#         "retrieved_docs": docs
-#     }
 
 @app.get("/my-interviews")
 def my_interviews(

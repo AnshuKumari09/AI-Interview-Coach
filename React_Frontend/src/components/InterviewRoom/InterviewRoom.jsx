@@ -11,6 +11,8 @@ import { Loader2, Play } from "lucide-react";
 import axios from "axios";
 import InterviewRoomSidebar from "./InterviewRoomSidebar";
 import { useLocation } from "react-router-dom";
+import ai from "../../images/ai.png";
+import Popup from "./PopUp";
 
 const BACKEND_URL = "http://localhost:8000"
 
@@ -63,9 +65,13 @@ const InterviewRoom = () => {
     const [currentQuestion,setCurrentQuestion] = useState([]);
     const [recording, setRecording] = useState(false);
     const [transcribing, setTranscribing] = useState(false);
+    const [currentQuestionNo, setCurrentQuestionNo] = useState(1);
 
     const mediaRecorderRef = useRef(null);
     const chunksRef = useRef([]);
+
+    const [isMuted, setIsMuted] = useState(false);
+    const [showPopup, setShowPopup] = useState(false);
 
     const location = useLocation();
     const {
@@ -171,6 +177,10 @@ const InterviewRoom = () => {
 
 
 const startRecording = async () => {
+  if (isMuted) {
+    alert("Microphone is muted");
+    return;
+  }
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: true,
@@ -242,6 +252,7 @@ const handleAudioStop = async (stream) => {
 
 
 const submitAnswerToBackend = async (userAnswer) => {
+
   try {
     const token = localStorage.getItem("token");
     console.log("sessionData", sessionData);
@@ -281,9 +292,9 @@ const submitAnswerToBackend = async (userAnswer) => {
       },
     ]);
  // AI REVIEW BOLEGA
-    if (result.evaluation) {
-      await speakAsync(result.evaluation);
-    }
+    // if (result.evaluation) {
+    //   await speakAsync(result.evaluation);
+    // }
 
     // NEXT QUESTION STORE
     setPendingNext(result.next_question || "");
@@ -300,7 +311,11 @@ const submitAnswerToBackend = async (userAnswer) => {
 };
 
 const handleNextQuestion = async () => {
-  if (!pendingNext) return;
+    if (!pendingNext){
+       setShowPopup(true);
+       return;
+    } 
+  setCurrentQuestionNo(prev => prev + 1);
 
   setConversations((prev) => [
     ...prev,
@@ -312,6 +327,7 @@ const handleNextQuestion = async () => {
   ]);
 
   setCurrentQuestion(pendingNext);
+  
 
   await speakAsync(pendingNext);
 
@@ -355,15 +371,19 @@ useEffect(() => {
               <span className="text-gray-300">0:00</span>
             </div>
           </div>
+          <span className="font-medium text-white">
+  Question {currentQuestionNo} / {numQuestions}
+</span>
 
           {/* Video Section */}
-          <div className="flex-1 flex items-center justify-center p-40">
-            <div className="w-full max-w-5xl h-[500px] bg-[#11112A] border border-white/5 rounded-xl p-30 flex flex-col items-center justify-center">
+          <div className="flex-1 flex items-center justify-center p-20"> 
+    
+            <div className="w-full max-w-5xl h-[700px] bg-[#11112A] border border-white/5 rounded-xl p-30 flex flex-col items-center justify-center">
               <div className="flex gap-6">
                 {/* AI Video */}
                 <div className="w-[400px] h-[360px] bg-[#1A1A35] rounded-md flex items-center justify-center relative">
-                  <div className="w-16 h-16 rounded-full bg-violet-500/20 border border-violet-500 flex items-center justify-center">
-                    <BsRobot className="text-3xl text-violet-300" />
+                  <div className="w-full h-full rounded-lg bg-violet-500/20 border border-violet-500 flex items-center justify-center">
+                    <img src={ai} className="object-contain h-full w-full" />
                   </div>
                 </div>
 
@@ -375,7 +395,7 @@ useEffect(() => {
               <button
               onClick={handleNextQuestion}
             disabled={!pendingNext}
-            className="w-[70%] mt-6 bg-violet-600 hover:bg-violet-700 disabled:opacity-60 py-3.5 rounded-xl font-semibold flex items-center justify-center gap-2 transition-colors"
+            className="w-[70%] mt-20 bg-violet-600 hover:bg-violet-700 disabled:opacity-60 py-3.5 rounded-xl font-semibold flex items-center justify-center gap-2 transition-colors"
           >
             {loading ? (
               <>
@@ -391,7 +411,7 @@ useEffect(() => {
             </button>
 
               {/* Controls */}
-              <div className="absolute bottom-20 flex items-center gap-4">
+              <div className="absolute bottom-35 flex items-center gap-4">
                 <button className="w-10 h-10 rounded-lg bg-black/50 flex items-center justify-center">
                   <FiVideo className="text-white" />
                 </button>
@@ -414,12 +434,20 @@ useEffect(() => {
                 )}
                 </div>
 
-                <button className="w-10 h-10 rounded-lg bg-black/50 flex items-center justify-center">
-                  <FiMicOff className="text-white" />
+                <button onClick={()=> setIsMuted(prev=>!prev)} className="w-10 h-10 rounded-lg bg-black/50 flex items-center justify-center">
+                  {
+                    isMuted?(<FiMicOff className="text-red-500" />):(<FiMic className="text-white" />)
+                  }
                 </button>
               </div>
             </div>
           </div>
+          <Popup
+            isOpen={showPopup}
+            onClose={() => setShowPopup(false)}
+            onPracticeAgain={() => window.location.reload()}
+            onNewInterview={() => navigate("/new-interview")}
+          />
 
           {/* Bottom Border */}
           <div className="h-14 border-t border-white/10" />

@@ -295,7 +295,7 @@ const SetUpScreen = () => {
                  <h1 className='text-white text-2xl font=[Bungee] font-bold'>AI <span className='text-2xl font-[Bungee] text-blue-300 font-bold'>Coach</span></h1>
              </div>
              <div className='flex bg-[#343434]/60 text-[#EB73DD] font-[sixty] text-xl flex gap-20 px-10 py-3 rounded-full'>
-                 <p>Review Interviews</p>
+                 <p onClick={()=>navigate('/history')}>Review Interviews</p>
                  <p>Past Interviews Trend</p>
                  <p>Interview Tips</p>
              </div>
