@@ -16,62 +16,107 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [interviews, setInterviews] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [token, setToken] = useState(null);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) { setLoading(false); return; }
+    const storedToken = localStorage.getItem("token");
+    setToken(storedToken);
+
+    if (!storedToken) {
+      setLoading(false);
+      return;
+    }
 
     axios
       .get(`${BACKEND_URL}/my-interviews`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${storedToken}` },
       })
       .then(({ data }) => setInterviews(data))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    setToken(null);
+    navigate("/login");
+  };
+
   // ── Derived stats ──────────────────────────────────────────────────────────
-const completed = interviews.filter(
-  (i) => i.score !== null && i.total_questions > 0
-);
+  const completed = interviews.filter(
+    (i) => i.score !== null && i.total_questions > 0
+  );
 
-const totalTaken = completed.length;
+  const totalTaken = completed.length;
 
-const sanitize = (s) => (s > 10 ? +(s / 10).toFixed(1) : +s);
+  const sanitize = (s) => (s > 10 ? +(s / 10).toFixed(1) : +s);
 
-const sanitizedScores = completed.map((i) => sanitize(i.score));
+  const sanitizedScores = completed.map((i) => sanitize(i.score));
 
-const sanitizedAvg =
-  sanitizedScores.length > 0
-    ? (
-        sanitizedScores.reduce((a, b) => a + b, 0) /
-        sanitizedScores.length
-      ).toFixed(1)
-    : null;
+  const avgScore =
+    sanitizedScores.length > 0
+      ? (
+          sanitizedScores.reduce((a, b) => a + b, 0) /
+          sanitizedScores.length
+        ).toFixed(1)
+      : null;
 
-const avgScore = sanitizedAvg;
+  const numberedCompleted = completed.map((item, idx) => ({
+    ...item,
+    displayNum: completed.length - idx,
+  }));
 
-const numberedCompleted = completed.map((item, idx) => ({
-  ...item,
-  displayNum: completed.length - idx,
-}));
+  const recentThree = numberedCompleted.slice(0, 3);
 
-const recentThree = numberedCompleted.slice(0, 3);
-
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0F172A] flex items-center justify-center">
+        <Loader2 className="animate-spin w-10 h-10 text-violet-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#0F172A] text-white p-8">
       {/* Header */}
       <div className="flex justify-between items-center mb-10">
         <div>
-          <h1 className="text-4xl font-bold">Welcome Back 👋</h1>
+          <h1 className="text-4xl font-bold">
+            {token ? "Welcome Back 👋" : "AI Interview Coach 🚀"}
+          </h1>
           <p className="text-gray-400 mt-2">
-            Prepare, Practice and Ace your interviews
+            {token
+              ? "Prepare, Practice and Ace your interviews"
+              : "Practice AI-powered mock interviews and improve your confidence"}
           </p>
         </div>
-        <button className="px-5 py-3 rounded-xl bg-violet-600 hover:bg-violet-700 transition">
-          Upgrade Pro
-        </button>
+
+        {/* Auth buttons */}
+        <div className="flex items-center gap-3">
+          {token ? (
+            <button
+              onClick={handleLogout}
+              className="px-5 py-3 rounded-xl bg-red-600 hover:bg-red-700 transition font-medium"
+            >
+              Logout
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={() => navigate("/login")}
+                className="px-5 py-3 rounded-xl border border-violet-500 text-violet-400 hover:bg-violet-900 transition font-medium"
+              >
+                Login
+              </button>
+              <button
+                onClick={() => navigate("/signup")}
+                className="px-5 py-3 rounded-xl bg-violet-600 hover:bg-violet-700 transition font-medium"
+              >
+                Sign Up
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Hero Card */}
@@ -82,11 +127,11 @@ const recentThree = numberedCompleted.slice(0, 3);
           communication, technical knowledge and confidence.
         </p>
         <button
-          onClick={() => navigate("/interview")}
+          onClick={() => (token ? navigate("/interview") : navigate("/login"))}
           className="flex items-center gap-2 bg-white text-black px-6 py-3 rounded-xl font-semibold hover:scale-105 transition"
         >
           <Play size={20} />
-          Start Interview
+          {token ? "Start Interview" : "Login to Start"}
         </button>
       </div>
 
@@ -95,17 +140,17 @@ const recentThree = numberedCompleted.slice(0, 3);
         <StatCard
           icon={<BarChart3 className="text-violet-400" />}
           label="Interviews Taken"
-          value={loading ? null : totalTaken}
+          value={totalTaken}
         />
         <StatCard
           icon={<Trophy className="text-yellow-400" />}
           label="Average Score"
-          value={loading ? null : avgScore !== null ? `${avgScore}/10` : "—"}
+          value={avgScore !== null ? `${avgScore}/10` : "—"}
         />
         <StatCard
           icon={<Clock className="text-green-400" />}
           label="Practice Sessions"
-          value={loading ? null : interviews.length}
+          value={interviews.length}
         />
       </div>
 
@@ -125,15 +170,13 @@ const recentThree = numberedCompleted.slice(0, 3);
             )}
           </div>
 
-          {loading ? (
-            <div className="flex items-center gap-2 text-slate-400 text-sm">
-              <Loader2 size={15} className="animate-spin" /> Loading…
-            </div>
-          ) : recentThree.length === 0 ? (
+          {recentThree.length === 0 ? (
             <p className="text-slate-400 text-sm">
               No completed interviews yet.{" "}
               <button
-                onClick={() => navigate("/interview")}
+                onClick={() =>
+                  token ? navigate("/interview") : navigate("/login")
+                }
                 className="text-violet-400 hover:underline"
               >
                 Start one now →
@@ -141,35 +184,40 @@ const recentThree = numberedCompleted.slice(0, 3);
             </p>
           ) : (
             <div className="space-y-4">
-              {recentThree.map((item) => (
-                <div
-                  key={item.session_id}
-                  className="flex justify-between items-center border-b border-slate-700 pb-3"
-                >
-                  <div>
-                    <p className="text-sm font-medium">
-                      Interview #{item.displayNum}
-                    </p>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      {item.total_questions} questions
-                      {item.completed_at
-                        ? ` · ${new Date(item.completed_at).toLocaleDateString()}`
-                        : ""}
-                    </p>
-                  </div>
-                  <span
-                    className={`font-semibold text-sm ${
-                      item.score >= 7
-                        ? "text-green-400"
-                        : item.score >= 5
-                        ? "text-yellow-400"
-                        : "text-red-400"
-                    }`}
+              {recentThree.map((item) => {
+                const score = sanitize(item.score);
+                return (
+                  <div
+                    key={item.session_id}
+                    className="flex justify-between items-center border-b border-slate-700 pb-3"
                   >
-                    {item.score}/10
-                  </span>
-                </div>
-              ))}
+                    <div>
+                      <p className="text-sm font-medium">
+                        Interview #{item.displayNum}
+                      </p>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        {item.total_questions} questions
+                        {item.completed_at
+                          ? ` · ${new Date(
+                              item.completed_at
+                            ).toLocaleDateString()}`
+                          : ""}
+                      </p>
+                    </div>
+                    <span
+                      className={`font-semibold text-sm ${
+                        score >= 7
+                          ? "text-green-400"
+                          : score >= 5
+                          ? "text-yellow-400"
+                          : "text-red-400"
+                      }`}
+                    >
+                      {score}/10
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -186,7 +234,9 @@ const recentThree = numberedCompleted.slice(0, 3);
             ].map((topic) => (
               <div
                 key={topic}
-                onClick={() => navigate("/interview")}
+                onClick={() =>
+                  token ? navigate("/interview") : navigate("/login")
+                }
                 className="flex justify-between items-center bg-slate-700 p-4 rounded-xl hover:bg-slate-600 transition cursor-pointer"
               >
                 <span>{topic}</span>
@@ -209,7 +259,7 @@ function StatCard({ icon, label, value }) {
         <h3 className="font-semibold">{label}</h3>
       </div>
       <p className="text-3xl font-bold mt-4">
-        {value === null ? (
+        {value === null || value === undefined ? (
           <Loader2 size={24} className="animate-spin text-slate-500" />
         ) : (
           value
