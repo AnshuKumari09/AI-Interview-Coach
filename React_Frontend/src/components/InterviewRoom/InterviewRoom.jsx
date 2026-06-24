@@ -82,6 +82,12 @@ const InterviewRoom = () => {
         numQuestions,
       } = location.state;
 
+      // Removes leading "Question 1:", "Q1.", "Question 1 -", etc. before speaking
+// Top pe helper function add karo
+function stripLeadingNumber(text = "") {
+  return text.replace(/^([Qq]?\d+[\.\)]\s*)+/, "").trim();
+}
+
      const speakAsync = async (text) => {
         console.log("Speaking text:", text);
 
@@ -162,11 +168,10 @@ const InterviewRoom = () => {
         }
       ]);
 
-      await speakAsync(
+    await speakAsync(
       (data.intro ? data.intro + "\n\n" : "") +
-      data.first_question
+      stripLeadingNumber(data.first_question)   // ✅ strip kiya
     );
-
     } catch (err) {
        console.log("ERROR:", err.response?.data);
   console.log("STATUS:", err.response?.status);
@@ -329,7 +334,7 @@ const handleNextQuestion = async () => {
   setCurrentQuestion(pendingNext);
   
 
-  await speakAsync(pendingNext);
+  await speakAsync(stripLeadingNumber(pendingNext))
 
   setPendingNext("");
 };

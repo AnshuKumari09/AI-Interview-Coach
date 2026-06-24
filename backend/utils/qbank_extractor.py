@@ -4,32 +4,62 @@ from utils.llm import llm
 
 def extract_questions_from_bank(qbank_text, difficulty, resume_text, num_questions=5):
     seed = str(uuid.uuid4())[:8]
-    prompt = f"""
-    You are a technical interviewer. Session: {seed}
 
-    Here is a question bank:
-    {qbank_text}
+    # ── Step 1: PDF ka summary / overview banao ──────────────────────────────
+    summary_prompt = f"""
+You are an expert content analyzer.
 
-    Candidate resume summary:
-    {resume_text[:500]}
+Read the following document carefully and create a structured summary:
 
-    Difficulty: {difficulty}
+DOCUMENT:
+{qbank_text[:3000]}
 
-    Select {num_questions} questions from the question bank.
-    Every time you are called, select DIFFERENT questions in DIFFERENT ORDER.
-    Do NOT always pick the same questions.
+Provide:
+1. TOPICS COVERED: List all major topics, concepts, technologies mentioned.
+2. EXISTING QUESTIONS: List any actual interview questions already present (if any). Write "NONE" if no questions found.
+3. KEY CONCEPTS: List important concepts that can be tested in an interview.
 
-    Return ONLY the questions, numbered 1 to {num_questions}.
-    One per line. No extra text.
-    """
-    response = llm.invoke(prompt)
+Be concise and structured.
+"""
+    summary_response = llm.invoke(summary_prompt)
+    summary = summary_response.content.strip()
+
+    # ── Step 2: Summary ke basis pe questions generate karo ─────────────────
+    question_prompt = f"""
+You are a technical interviewer. Session ID: {seed}
+
+DOCUMENT SUMMARY:
+{summary}
+
+ORIGINAL DOCUMENT (for reference):
+{qbank_text[:2000]}
+
+Candidate resume:
+{resume_text[:300] if resume_text else "Not provided"}
+
+Difficulty level: {difficulty}
+
+INSTRUCTIONS:
+- If the document already contains interview questions, PREFER using those directly.
+- For remaining questions (or if no questions exist), generate NEW questions based on the topics and concepts in the summary.
+- All questions must be relevant to the topics in the document.
+- Match difficulty: {difficulty} (Easy = basic concepts, Medium = applied knowledge, Hard = deep understanding + edge cases)
+- Do NOT ask meta questions about the document itself.
+- Generate EXACTLY {num_questions} questions total.
+- Return ONLY the questions, numbered 1 to {num_questions}, one per line.
+- No extra text, no explanations.
+
+Output:
+1. [question]
+2. [question]
+"""
+
+    response = llm.invoke(question_prompt)
     questions = [
         q.strip()
         for q in response.content.split("\n")
         if q.strip() and q.strip()[0].isdigit()
     ]
-    
-    # ✅ Extra randomization
+
     random.shuffle(questions)
-    
-    return questions
+    return questions[:num_questions]

@@ -266,7 +266,8 @@
 
 import React from 'react'
 import { RxModulzLogo } from "react-icons/rx";
-import landingSVG from '../../images/landing_page.png'
+// import landingSVG from '../../images/landing_page.png'
+import landingSVG from '../../assets/dashboard3.png'
 import { FaUserDoctor } from "react-icons/fa6";
 import { FaHospitalUser } from "react-icons/fa";
 import { TbHeartRateMonitor } from "react-icons/tb";
@@ -294,7 +295,7 @@ const SetUpScreen = () => {
              <div className="logo">
                  <h1 className='text-white text-2xl font=[Bungee] font-bold'>AI <span className='text-2xl font-[Bungee] text-blue-300 font-bold'>Coach</span></h1>
              </div>
-             <div className='flex bg-[#343434]/60 text-[#EB73DD] font-[sixty] text-xl flex gap-20 px-10 py-3 rounded-full'>
+             <div className='flex bg-[#343434]/60 text-[#EB73DD] font-[sixty] cursor-pointer text-xl flex gap-20 px-10 py-3 rounded-full'>
                  <p onClick={()=>navigate('/history')}>Review Interviews</p>
                  <p>Past Interviews Trend</p>
                  <p>Interview Tips</p>
@@ -360,10 +361,10 @@ const SetUpScreen = () => {
                             </div>
                         </div>    
                     </div>
-                    <button onClick={()=>navigate('/upload')} className=' px-10 py-3 mt-10 rounded-md bg-[#3979E2] text-3xl'>Get Started</button>
+                    <button onClick={()=>navigate('/upload')} className=' px-10 py-3 mt-10 rounded-md bg-[#3979E2] text-3xl cursor-pointer'>Get Started</button>
                 </div>
-                <div className='right  flex-1'>
-                    <img src={landingSVG}  className="w-full h-full " alt="" />
+                <div className='right  flex-1 rounded-3xl'>
+                    <img src={landingSVG}  className="w-full h-full rounded-3xl p-5" alt="" />
                 </div>
 
             </div>
