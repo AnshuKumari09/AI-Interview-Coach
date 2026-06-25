@@ -78,7 +78,9 @@ class InterviewAnswerRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: str
     password: str
-
+class UserCreate(BaseModel):
+    email: str
+    password: str
 @app.post("/login")
 def login(data: LoginRequest, db: Session = Depends(get_db)):
 
@@ -415,7 +417,7 @@ Let's begin.
 
 
 @app.post("/signup")
-def signup(email: str, password: str, db: Session = Depends(get_db)):
+def signup(user: UserCreate, db: Session = Depends(get_db)):
 
     user = db.query(User).filter(User.email == email).first()
 
