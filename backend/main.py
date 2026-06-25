@@ -75,26 +75,54 @@ class InterviewAnswerRequest(BaseModel):
     db_session_id: int
     answer: str
 
-
-@app.get("/")
-def home():
-    return {"message": "AI Interview Coach API Working"}
-
+class LoginRequest(BaseModel):
+    email: str
+    password: str
 
 @app.post("/login")
-def login(email: str, password: str, db: Session = Depends(get_db)):
+def login(data: LoginRequest, db: Session = Depends(get_db)):
 
-    user = db.query(User).filter(User.email == email).first()
+    user = db.query(User).filter(
+        User.email == data.email
+    ).first()
 
-    if not user or not verify_password(password, user.password):
-        raise HTTPException(status_code=400, detail="Invalid credentials")
+    if not user or not verify_password(
+        data.password,
+        user.password
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid credentials"
+        )
 
-    token = create_access_token({"sub": user.email})
+    token = create_access_token(
+        {"sub": user.email}
+    )
 
     return {
         "access_token": token,
         "token_type": "bearer"
     }
+    
+@app.get("/")
+def home():
+    return {"message": "AI Interview Coach API Working"}
+
+
+# @app.post("/login")
+# def login(email: str, password: str, db: Session = Depends(get_db)):
+
+#     user = db.query(User).filter(User.email == email).first()
+
+#     if not user or not verify_password(password, user.password):
+#         raise HTTPException(status_code=400, detail="Invalid credentials")
+
+#     token = create_access_token({"sub": user.email})
+
+#     return {
+#         "access_token": token,
+#         "token_type": "bearer"
+#     }
 
 
 @app.post("/analyze-resume")
