@@ -34,7 +34,8 @@ import InterViewConfiguration from '../upload/InterViewConfiguration';
 import { FiUploadCloud } from 'react-icons/fi';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-const BACKEND_URL = "http://localhost:8000"
+// const BACKEND_URL = "http://localhost:8000"
+const BACKEND_URL = "https://ai-interview-coach-0mp0.onrender.com"
 
 const Page2 = () => {
     const navigate = useNavigate();

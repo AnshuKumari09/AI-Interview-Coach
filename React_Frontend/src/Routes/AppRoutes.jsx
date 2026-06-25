@@ -10,7 +10,7 @@ import InterviewHistory from "../components/dashboard/InterviewHistory";
 import Interview from '../components/dashboard/interview'
 import Page2 from '../components/Interview/Page2'
 import Page3 from '../components/Interview/Page3'
-import Popup from '../components/InterviewRoom/PopUp'
+import InterviewCompletion from '../components/InterviewRoom/InterviewCompletion'
 
 const AppRoutes = () => {
    const token = localStorage.getItem("token");
@@ -48,7 +48,7 @@ const AppRoutes = () => {
         
          <Route path="/new-interview" element={
           <ProtectedRoute>
-            <Popup />
+            <InterviewCompletion />
           </ProtectedRoute>
         }
           />

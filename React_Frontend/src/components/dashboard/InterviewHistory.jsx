@@ -16,7 +16,8 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-const BACKEND_URL = "http://localhost:8000";
+// const BACKEND_URL = "http://localhost:8000";
+const BACKEND_URL = "https://ai-interview-coach-0mp0.onrender.com"
 
 /* ---------------------------------------------------------------------
    Design language: "Transcript" — your interview history read like a
@@ -153,7 +154,7 @@ export default function InterviewHistory() {
         {/* Header */}
          <button
          type="button"
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/dashboard")}
               className="relative z-10 text-[#8A93A8] hover:text-[#E8E6DF] cursor-pointer py-1 px-2 rounded-md transition flex items-center gap-1.5 text-lg mb-4 font-medium"
             >
               <ArrowLeft size={20} /> Dashboard
