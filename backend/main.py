@@ -419,14 +419,21 @@ Let's begin.
 @app.post("/signup")
 def signup(user: UserCreate, db: Session = Depends(get_db)):
 
-    user = db.query(User).filter(User.email == email).first()
+    existing_user = (
+        db.query(User)
+        .filter(User.email == user.email)
+        .first()
+    )
 
-    if user:
-        raise HTTPException(status_code=400, detail="User already exists")
+    if existing_user:
+        raise HTTPException(
+            status_code=400,
+            detail="User already exists"
+        )
 
     new_user = User(
-        email=email,
-        password=hash_password(password)
+        email=user.email,
+        password=hash_password(user.password)
     )
 
     db.add(new_user)
