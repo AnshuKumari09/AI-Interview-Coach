@@ -47,6 +47,7 @@ app.add_middleware(
     allow_origins=[
         "https://ai-interview-coach-dun-six.vercel.app",
         "http://localhost:5173",
+        "https://ai-interview-coach-iota-gules.vercel.app"
     ],
     allow_credentials=True,
     allow_methods=["*"],
